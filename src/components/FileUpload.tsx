@@ -1,6 +1,7 @@
 // FileUpload.tsx
 import React, { useState } from 'react';
 import { FaCloudUploadAlt } from 'react-icons/fa'; // Cloud upload icon
+import { uploadFile } from '../services/apiService';
 
 const FileUpload: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -44,7 +45,7 @@ const FileUpload: React.FC = () => {
   // Determine if submit button should be enabled
   const isSubmitDisabled = !selectedFile || !selectedBrokerage || !selectedDate || !!dateError;
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!isSubmitDisabled) {
       console.log('Submitting data:', {
         selectedFile,
@@ -52,6 +53,18 @@ const FileUpload: React.FC = () => {
         selectedDate
       });
       // Handle the form submission logic here
+      try {
+        // Create a FormData object and append fields
+        const formData = new FormData();
+        if (selectedFile) formData.append('file', selectedFile); // Append the file
+        formData.append('brokerageName', selectedBrokerage || ''); // Append the brokerage name
+        formData.append('date', selectedDate || ''); // Append the date
+
+        const response = await uploadFile(formData); // Call the API to upload the file
+        console.log('Response:', response);
+      } catch (error) {
+        console.error('Error uploading file:', error);
+      }
     }
   };
 
