@@ -38,13 +38,14 @@ const Register = () => {
       setPasswordError('');
     }
 
-    const isValid =
+    const isValid = !!(
       email &&
       password &&
       confirmPassword &&
       password === confirmPassword &&
       isValidEmail(email) &&
-      isPasswordValid;
+      isPasswordValid
+    );
 
     setIsFormValid(isValid);
   }, [email, password, confirmPassword]);

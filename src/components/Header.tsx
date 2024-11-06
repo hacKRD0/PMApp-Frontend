@@ -1,5 +1,5 @@
 // src/components/Header.tsx
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext'; // Custom context for auth
 import { logout } from '../services/authService'; // Logout function from Firebase

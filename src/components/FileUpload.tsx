@@ -1,17 +1,34 @@
-// FileUpload.tsx
-import React, { useState } from 'react';
-import { FaCloudUploadAlt } from 'react-icons/fa'; // Cloud upload icon
-import { uploadFile } from '../services/apiService';
+import React, { useEffect, useState } from 'react';
+import { FaCloudUploadAlt } from 'react-icons/fa';
+import { uploadFile, getBrokerages } from '../services/apiService';
 
 const FileUpload: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [brokerages, setBrokerages] = useState<string[]>([]);
   const [selectedBrokerage, setSelectedBrokerage] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [dateError, setDateError] = useState<string | null>(null);
 
-  // Get today's date in YYYY-MM-DD format
   const today = new Date().toISOString().split("T")[0];
+
+  useEffect(() => {
+    const fetchBrokerages = async () => {
+      try {
+        const response = await getBrokerages();
+        if (response.success && response.Brokerages) {
+          setBrokerages(response.Brokerages.map((brokerage: any) => brokerage.name));
+        } else {
+          setErrorMessage("Failed to load brokerages");
+        }
+      } catch (error) {
+        setErrorMessage("Error fetching brokerages");
+        console.error("Error fetching brokerages:", error);
+      }
+    };
+
+    fetchBrokerages();
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files ? e.target.files[0] : null;
@@ -26,7 +43,7 @@ const FileUpload: React.FC = () => {
 
   const handleButtonClick = () => {
     const fileInput = document.getElementById('fileInput') as HTMLInputElement;
-    if (fileInput) fileInput.click(); // Trigger hidden file input click
+    if (fileInput) fileInput.click();
   };
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -40,30 +57,29 @@ const FileUpload: React.FC = () => {
     }
   };
 
-  const brokerages = ["Brokerage 1", "Brokerage 2", "Brokerage 3"]; // Options for the dropdown
-
-  // Determine if submit button should be enabled
   const isSubmitDisabled = !selectedFile || !selectedBrokerage || !selectedDate || !!dateError;
 
   const handleSubmit = async () => {
     if (!isSubmitDisabled) {
-      console.log('Submitting data:', {
-        selectedFile,
-        selectedBrokerage,
-        selectedDate
-      });
-      // Handle the form submission logic here
       try {
-        // Create a FormData object and append fields
         const formData = new FormData();
-        if (selectedFile) formData.append('file', selectedFile); // Append the file
-        formData.append('brokerageName', selectedBrokerage || ''); // Append the brokerage name
-        formData.append('date', selectedDate || ''); // Append the date
+        if (selectedFile) formData.append('file', selectedFile, selectedFile.name);
+        formData.append('brokerageName', selectedBrokerage || '');
+        formData.append('date', selectedDate || '');
 
-        const response = await uploadFile(formData); // Call the API to upload the file
-        console.log('Response:', response);
+        const response = await uploadFile(formData);
+
+        if (response.success) {
+          alert("File upload successful!");
+          setSelectedFile(null);
+          setSelectedBrokerage(null);
+          setSelectedDate(null);
+        } else {
+          alert("File upload failed. Please try again.");
+        }
       } catch (error) {
         console.error('Error uploading file:', error);
+        alert("An error occurred during file upload. Please try again.");
       }
     }
   };
@@ -73,18 +89,16 @@ const FileUpload: React.FC = () => {
       <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
         <h2 className="text-xl font-semibold mb-6 text-gray-800">Upload Your Portfolio CSV</h2>
 
-        {/* File Upload Button */}
         <div className="mb-4 flex flex-col items-center justify-center">
           <button
             type="button"
             onClick={handleButtonClick}
             className="flex items-center justify-center w-full p-4 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 focus:outline-none"
           >
-            <FaCloudUploadAlt className="text-2xl mr-2" /> {/* Cloud icon */}
+            <FaCloudUploadAlt className="text-2xl mr-2" />
             <span className="text-sm">Click to upload CSV</span>
           </button>
 
-          {/* Hidden File Input */}
           <input
             type="file"
             accept=".csv"
@@ -96,9 +110,7 @@ const FileUpload: React.FC = () => {
           {errorMessage && <p className="text-red-500 text-sm mt-2">{errorMessage}</p>}
         </div>
 
-        {/* Dropdown for Brokerage Selection */}
         <div className="mb-4">
-          {/* <label className="block text-gray-600 mb-2">Select Brokerage</label> */}
           <select
             className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:border-indigo-500"
             value={selectedBrokerage || ""}
@@ -113,25 +125,21 @@ const FileUpload: React.FC = () => {
           </select>
         </div>
 
-        {/* Date Picker for Download Date */}
         <div className="mb-4">
-          {/* <label className="block text-gray-600 mb-2">Select Download Date</label> */}
           <input
             type="date"
             className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:border-indigo-500"
             value={selectedDate || ""}
             onChange={handleDateChange}
-            max={today} // Ensure the date cannot be in the future
+            max={today}
           />
           {dateError && <p className="text-red-500 text-sm mt-2">{dateError}</p>}
         </div>
 
-        {/* Display selected file */}
         {selectedFile && (
           <p className="text-gray-700 mt-4">Selected file: {selectedFile.name}</p>
         )}
 
-        {/* Submit Button */}
         <button
           type="button"
           onClick={handleSubmit}

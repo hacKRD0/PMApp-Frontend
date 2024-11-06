@@ -26,3 +26,10 @@ export const signInWithGoogle = async () => {
 export const logout = async () => {
   return await signOut(auth);
 };
+
+// Set the auth token in local storage
+// export const setAuthToken = async () => {
+//   const authToken = await getAuthToken() || '';
+//   localStorage.setItem('authToken', authToken);
+// };
+

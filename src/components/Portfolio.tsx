@@ -1,61 +1,37 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { fetchPortfolio } from '../services/apiService';
 
 const Portfolio: React.FC = () => {
   const portfolioData = {
     success: true,
     portfolio: [
-      {
-        id: 33,
-        UserId: 1,
-        StockMasterId: 1,
-        Qty: 7,
-        AvgCost: 3139.85,
-        StockMaster: {
-          StockReference: { id: 1, name: 'Reliance Industries', sector: 'Energy', code: 'RELIANCE' },
-          Brokerage: { name: 'Zerodha' }
-        }
-      },
-      {
-        id: 32,
-        UserId: 1,
-        StockMasterId: 1,
-        Qty: 10,
-        AvgCost: 3100.85,
-        StockMaster: {
-          StockReference: { id: 1, name: 'Reliance Industries', sector: 'Energy', code: 'RELIANCE' },
-          Brokerage: { name: 'Sharekhan' }
-        }
-      },
-      {
-        id: 21,
-        UserId: 1,
-        StockMasterId: 7,
-        Qty: 5,
-        AvgCost: 1635.55,
-        StockMaster: {
-          StockReference: { id: 3, name: 'HDFC Bank', sector: 'Banking', code: 'HDFCBANK' },
-          Brokerage: { name: 'Zerodha' }
-        }
-      },
-      {
-        id: 22,
-        UserId: 1,
-        StockMasterId: 8,
-        Qty: 3,
-        AvgCost: 3200.00,
-        StockMaster: {
-          StockReference: { id: 1, name: 'Reliance Industries', sector: 'Energy', code: 'RELIANCE' },
-          Brokerage: { name: 'Upstox' }
-        }
-      }
+      // Sample data...
     ]
   };
-
   const [portfolio, setPortfolio] = useState(portfolioData.portfolio);
   const [expandedGroups, setExpandedGroups] = useState<{ [key: string]: boolean }>({});
   const [viewMode, setViewMode] = useState<'Sector' | 'Brokerage'>('Sector');
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
-  // Aggregate stocks by selected view (sector or brokerage)
+  const fetchData = async () => {
+    try {
+      const data = await fetchPortfolio(selectedDate);
+      if (data.success) {
+        setPortfolio(data.portfolio);
+      }
+    } catch (error) {
+      console.error('Error fetching portfolio:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [selectedDate]);
+
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSelectedDate(e.target.value);
+  };
+
   const aggregatePortfolio = () => {
     const aggregation: {
       [key: string]: {
@@ -65,18 +41,19 @@ const Portfolio: React.FC = () => {
     } = {};
 
     const currentPrices: { [key: string]: number } = {
-      RELIANCE: 3500, // Example market price for RELIANCE
-      HDFCBANK: 1700 // Example market price for HDFCBANK
+      RELIANCE: 3500,
+      HDFCBANK: 1700,
     };
 
     portfolio.forEach((stock) => {
-      // Choose group key based on view mode
-      const groupKey = viewMode === 'Sector' ? stock.StockMaster.StockReference.sector : stock.StockMaster.Brokerage.name;
-      const stockId = stock.StockMaster.StockReference.id;
-      const stockName = stock.StockMaster.StockReference.name;
+      const groupKey = viewMode === 'Sector' 
+        ? stock.StockMaster.StockReference?.sector || "Unknown Sector" 
+        : stock.StockMaster.Brokerage?.name || "Unknown Brokerage";
+      const stockId = stock.StockMaster.StockReference?.id || stock.StockMaster.BrokerageCode;
+      const stockName = stock.StockMaster.StockReference?.name || stock.StockMaster.BrokerageCode || "Unknown Stock";
 
       const totalCostForStock = stock.Qty * stock.AvgCost;
-      const marketPrice = currentPrices[stock.StockMaster.StockReference.code] || 0;
+      const marketPrice = currentPrices[stock.StockMaster.StockReference?.code || stock.StockMaster.BrokerageCode || ""] || 0;
       const stockValue = stock.Qty * marketPrice;
 
       if (!aggregation[groupKey]) {
@@ -95,12 +72,11 @@ const Portfolio: React.FC = () => {
           qty: stock.Qty,
           totalCost: totalCostForStock,
           avgCost: 0,
-          totalValue: stockValue
+          totalValue: stockValue,
         };
       }
     });
 
-    // Calculate weighted average cost for each stock
     Object.values(aggregation).forEach((groupData) => {
       Object.values(groupData.stocks).forEach((stock) => {
         stock.avgCost = stock.totalCost / stock.qty;
@@ -115,7 +91,7 @@ const Portfolio: React.FC = () => {
   const toggleGroup = (groupKey: string) => {
     setExpandedGroups((prev) => ({
       ...prev,
-      [groupKey]: !prev[groupKey]
+      [groupKey]: !prev[groupKey],
     }));
   };
 
@@ -128,6 +104,20 @@ const Portfolio: React.FC = () => {
   return (
     <div className="container mx-auto py-8">
       <h1 className="text-3xl font-bold mb-4">Consolidated Portfolio</h1>
+
+      {/* Date Picker */}
+      <div className="mb-4">
+        <label htmlFor="date" className="mr-2 font-semibold text-gray-700">
+          Select Date:
+        </label>
+        <input
+          type="date"
+          id="date"
+          value={selectedDate}
+          onChange={handleDateChange}
+          className="p-2 border border-gray-300 rounded"
+        />
+      </div>
 
       {/* View Mode Dropdown */}
       <div className="mb-4">
@@ -158,7 +148,6 @@ const Portfolio: React.FC = () => {
           <tbody>
             {Object.keys(aggregatedData).map((groupKey) => (
               <React.Fragment key={groupKey}>
-                {/* Group Row (Sector or Brokerage) */}
                 <tr
                   className="cursor-pointer bg-gray-200"
                   onClick={() => toggleGroup(groupKey)}
@@ -166,8 +155,6 @@ const Portfolio: React.FC = () => {
                   <td className="py-2 px-4 border font-semibold">{groupKey}</td>
                   <td className="py-2 px-4 border">${aggregatedData[groupKey].totalInvested.toFixed(2)}</td>
                 </tr>
-
-                {/* Expanded Stocks for Group */}
                 {expandedGroups[groupKey] && (
                   <tr>
                     <td colSpan={2}>

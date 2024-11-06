@@ -6,12 +6,12 @@ import { getAuth, GoogleAuthProvider, onAuthStateChanged } from "firebase/auth";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
-  authDomain: process.env.REACT_APP_FIREBASE_AUTHDOMAIN,
-  projectId: process.env.REACT_APP_FIREBASE_PROJECTID,
-  storageBucket: process.env.REACT_APP_FIREBASE_STORAGEBUCKET,
-  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGINGSENDERID,
-  appId: process.env.REACT_APP_FIREBASE_APPID
+  apiKey: "AIzaSyCAQ4Yq6Zn3rLupAmFAgpVEciDh1x4X0yQ",
+  authDomain: "pmapp-7cbf0.firebaseapp.com",
+  projectId: "pmapp-7cbf0",
+  storageBucket: "pmapp-7cbf0.appspot.com",
+  messagingSenderId: "1062199495669",
+  appId: "1:1062199495669:web:fdac8259808be1e81f6ebc"
 };
 
 // Initialize Firebase
@@ -30,3 +30,13 @@ export const getUserUid = (): Promise<string | null> => {
     });
   });
 };
+
+export const getAuthToken = async () => {
+  const auth = getAuth();
+  const user = auth.currentUser;
+  if (user) {
+    const token = await user.getIdToken();
+    return token;
+  }
+  return null;
+}
