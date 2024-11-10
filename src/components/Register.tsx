@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signUp } from '../services/authService';
+import { addUser } from '../services/apiService';
 
 const Register = () => {
   const [email, setEmail] = useState('');
@@ -55,6 +56,7 @@ const Register = () => {
     if (!isFormValid) return; // Prevent submission if the form is not valid
     try {
       await signUp(email, password);
+      await addUser(email, email.split('@')[0], password); // Add user to the database
       navigate('/'); // Redirect to home on success
     } catch (err) {
       setError((err as Error).message);

@@ -105,4 +105,11 @@ export const getBrokerages = async () => {
   return response.data;
 }
 
+// Add new user to database
+export const addUser = async (email: string, name: string, password: string) => {
+  const requestBody = JSON.stringify({ email: email, name: name, password: password });
+  const response = await api.post('/auth/register', requestBody);
+  return response.data;
+};
+
 export default api;

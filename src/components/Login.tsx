@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signIn, signInWithGoogle } from '../services/authService';
+import { addUser } from '../services/apiService';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -22,6 +23,7 @@ const Login = () => {
   const handleGoogleSignIn = async () => {
     try {
       await signInWithGoogle();
+      await addUser(email, email.split('@')[0], ''); // Add user to the database
       navigate('/'); // Redirect to home on success
     } catch (err) {
       setError((err as Error).message);
