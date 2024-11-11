@@ -18,7 +18,6 @@ const api = axios.create({
 // Request interceptor to attach the Firebase UID to every request
 api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
   const authToken = await getAuthToken(); // Retrieve the Firebase Auth token
-  console.log('authToken:', authToken);
   if (authToken) {
     config.headers.set('Authorization', `Bearer ${authToken}`); // Add the UID to the Authorization header
   }

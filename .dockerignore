@@ -1,0 +1,34 @@
+# Ignore node modules and dependencies installed locally
+node_modules
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+package-lock.json
+
+# Ignore local environment and configuration files
+# .env
+# .env.local
+# *.local
+# *.env.*
+
+# Ignore any logs
+logs
+*.log
+*.log.*
+
+# Ignore editor and IDE config files
+.vscode
+.idea
+*.swp
+
+# Ignore Docker-related files if not needed in the container
+Dockerfile
+docker-compose.yml
+
+# Ignore Vite development files and cache
+dist
+.cache
+.vite
+
+# Ignore public source files if already bundled in dist
+public

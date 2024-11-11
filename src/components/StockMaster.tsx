@@ -33,7 +33,7 @@ const StockMaster: React.FC = () => {
         const stockMasterResponse = await fetchStockMaster();
         const stockReferencesResponse = await fetchStockReferences();
         const sectorsResponse = await fetchSectors();
-        console.log('stockMasterResponse:', stockMasterResponse);
+        // console.log('stockMasterResponse:', stockMasterResponse);
         if (stockMasterResponse.success && stockMasterResponse.StockMaster) {
           const formattedStocks = stockMasterResponse.StockMaster.map((item: any) => ({
             id: item.id,
@@ -42,7 +42,7 @@ const StockMaster: React.FC = () => {
             sector: item.StockReference?.sector || 'Unknown Sector',
             brokerage: item.Brokerage?.name || 'Unknown Brokerage',
           }));
-          console.log('formattedStocks:', formattedStocks);
+          // console.log('formattedStocks:', formattedStocks);
           setStocks(formattedStocks);
         } else {
           console.error('StockMaster data is missing or not successful:', stockMasterResponse);
@@ -105,7 +105,7 @@ const StockMaster: React.FC = () => {
             delete updated[id]; // Clear edited data for this stock after saving
             return updated;
           });
-          console.log(`Stock with ID ${id} updated successfully`);
+          // console.log(`Stock with ID ${id} updated successfully`);
         } else {
           console.error(`Failed to update stock with ID ${id}:`, response.message);
         }
