@@ -1,5 +1,5 @@
-import './App.css'
-// import React from 'react';
+import './App.css';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Login from './components/Login';
 import Register from './components/Register';
@@ -10,6 +10,7 @@ import UploadPage from './pages/UploadPage.tsx';
 import PortfolioPage from './pages/PortfolioPage.tsx';
 import StockMasterPage from './pages/StockMasterPage.tsx';
 import SectorMasterPage from './pages/SectorMasterPage.tsx';
+import StockReferencePage from './pages/StockReferencePage.tsx';
 
 function App() {
   return (
@@ -18,7 +19,6 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-
           {/* Protected route example */}
           <Route
             path="/"
@@ -28,14 +28,50 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route path="/portfolio" element={<PortfolioPage />} /> {/* Add PortfolioPage route */}
-          <Route path="/stockmaster" element={<StockMasterPage />} /> {/* Add StockMasterPage route */}
-          <Route path="/sectormaster" element={<SectorMasterPage />} /> {/* Add StockMasterPage route */}
-      
+          <Route
+            path="/portfolio"
+            element={
+              <ProtectedRoute>
+                {' '}
+                <PortfolioPage />
+              </ProtectedRoute>
+            }
+          />{' '}
+          {/* Add PortfolioPage route */}
+          <Route
+            path="/stockmaster"
+            element={
+              <ProtectedRoute>
+                {' '}
+                <StockMasterPage />
+              </ProtectedRoute>
+            }
+          />{' '}
+          {/* Add StockMasterPage route */}
+          <Route
+            path="/sectormaster"
+            element={
+              <ProtectedRoute>
+                {' '}
+                <SectorMasterPage />
+              </ProtectedRoute>
+            }
+          />{' '}
+          {/* Add StockMasterPage route */}
+          <Route
+            path="/stockreference"
+            element={
+              <ProtectedRoute>
+                {' '}
+                <StockReferencePage />
+              </ProtectedRoute>
+            }
+          />{' '}
+          {/* Add StockReferencePage route */}
         </Routes>
       </Router>
     </AuthProvider>
   );
 }
 
-export default App
+export default App;

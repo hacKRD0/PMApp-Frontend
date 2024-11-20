@@ -40,3 +40,13 @@
 .read-the-docs {
   color: #888;
 }
+
+.react-datepicker__day--highlighted {
+  background-color: #f87171 /* Light red */;
+  color: white;
+  border-radius: 50%;
+}
+
+.react-datepicker__day--highlighted:hover {
+  background-color: #ef4444; /* Darker red */
+}

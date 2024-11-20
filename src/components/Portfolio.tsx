@@ -2,16 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { fetchPortfolio } from '../services/apiService';
 
 const Portfolio: React.FC = () => {
-  const portfolioData = {
-    success: true,
-    portfolio: [
-      // Sample data...
-    ]
-  };
-  const [portfolio, setPortfolio] = useState(portfolioData.portfolio);
-  const [expandedGroups, setExpandedGroups] = useState<{ [key: string]: boolean }>({});
+  const [portfolio, setPortfolio] = useState<any[]>([]);
+  const [expandedGroups, setExpandedGroups] = useState<{
+    [key: string]: boolean;
+  }>({});
   const [viewMode, setViewMode] = useState<'Sector' | 'Brokerage'>('Sector');
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(
+    new Date().toISOString().split('T')[0]
+  );
 
   const fetchData = async () => {
     try {
@@ -36,7 +34,15 @@ const Portfolio: React.FC = () => {
     const aggregation: {
       [key: string]: {
         totalInvested: number;
-        stocks: { [key: number]: { name: string; qty: number; totalCost: number; avgCost: number; totalValue: number } };
+        stocks: {
+          [key: number]: {
+            name: string;
+            qty: number;
+            totalCost: number;
+            avgCost: number;
+            totalValue: number;
+          };
+        };
       };
     } = {};
 
@@ -46,14 +52,23 @@ const Portfolio: React.FC = () => {
     };
 
     portfolio.forEach((stock) => {
-      const groupKey = viewMode === 'Sector' 
-        ? stock.StockMaster.StockReference?.sector || "Unknown Sector" 
-        : stock.StockMaster.Brokerage?.name || "Unknown Brokerage";
-      const stockId = stock.StockMaster.StockReference?.id || stock.StockMaster.BrokerageCode;
-      const stockName = stock.StockMaster.StockReference?.name || stock.StockMaster.BrokerageCode || "Unknown Stock";
+      const stockMaster = stock.StockMaster;
+      const stockReference = stockMaster?.StockReference;
+      const groupKey =
+        viewMode === 'Sector'
+          ? stockReference?.Sector?.name ||
+            (stockReference ? 'Uncategorized Sector' : 'Unknown Sector')
+          : stockMaster?.Brokerage?.name || 'Unknown Brokerage';
+
+      const stockId = stockReference?.id || stockMaster?.id || 0;
+      const stockName =
+        stockReference?.name || stockMaster?.BrokerageCode || 'Unknown Stock';
 
       const totalCostForStock = stock.Qty * stock.AvgCost;
-      const marketPrice = currentPrices[stock.StockMaster.StockReference?.code || stock.StockMaster.BrokerageCode || ""] || 0;
+      const marketPrice =
+        currentPrices[
+          stockReference?.code || stockMaster?.BrokerageCode || ''
+        ] || 0;
       const stockValue = stock.Qty * marketPrice;
 
       if (!aggregation[groupKey]) {
@@ -96,7 +111,10 @@ const Portfolio: React.FC = () => {
   };
 
   const calculateTotalInvested = () => {
-    return Object.values(aggregatedData).reduce((total, group) => total + group.totalInvested, 0);
+    return Object.values(aggregatedData).reduce(
+      (total, group) => total + group.totalInvested,
+      0
+    );
   };
 
   const totalInvested = calculateTotalInvested();
@@ -127,7 +145,9 @@ const Portfolio: React.FC = () => {
         <select
           id="viewMode"
           value={viewMode}
-          onChange={(e) => setViewMode(e.target.value as 'Sector' | 'Brokerage')}
+          onChange={(e) =>
+            setViewMode(e.target.value as 'Sector' | 'Brokerage')
+          }
           className="p-2 border border-gray-300 rounded"
         >
           <option value="Sector">Sector</option>
@@ -137,7 +157,9 @@ const Portfolio: React.FC = () => {
 
       {/* Aggregated Table */}
       <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-        <h2 className="text-xl font-semibold mb-4">{viewMode}-Wise Distribution</h2>
+        <h2 className="text-xl font-semibold mb-4">
+          {viewMode}-Wise Distribution
+        </h2>
         <table className="min-w-full bg-white">
           <thead>
             <tr>
@@ -153,7 +175,9 @@ const Portfolio: React.FC = () => {
                   onClick={() => toggleGroup(groupKey)}
                 >
                   <td className="py-2 px-4 border font-semibold">{groupKey}</td>
-                  <td className="py-2 px-4 border">${aggregatedData[groupKey].totalInvested.toFixed(2)}</td>
+                  <td className="py-2 px-4 border">
+                    ${aggregatedData[groupKey].totalInvested.toFixed(2)}
+                  </td>
                 </tr>
                 {expandedGroups[groupKey] && (
                   <tr>
@@ -168,14 +192,24 @@ const Portfolio: React.FC = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {Object.values(aggregatedData[groupKey].stocks).map((stock, index) => (
-                            <tr key={index} className="bg-gray-100">
-                              <td className="py-2 px-4 border">{stock.name}</td>
-                              <td className="py-2 px-4 border">{stock.qty}</td>
-                              <td className="py-2 px-4 border">${stock.avgCost.toFixed(2)}</td>
-                              <td className="py-2 px-4 border">${stock.totalValue.toFixed(2)}</td>
-                            </tr>
-                          ))}
+                          {Object.values(aggregatedData[groupKey].stocks).map(
+                            (stock, index) => (
+                              <tr key={index} className="bg-gray-100">
+                                <td className="py-2 px-4 border">
+                                  {stock.name}
+                                </td>
+                                <td className="py-2 px-4 border">
+                                  {stock.qty}
+                                </td>
+                                <td className="py-2 px-4 border">
+                                  ${stock.avgCost.toFixed(2)}
+                                </td>
+                                <td className="py-2 px-4 border">
+                                  ${stock.totalValue.toFixed(2)}
+                                </td>
+                              </tr>
+                            )
+                          )}
                         </tbody>
                       </table>
                     </td>

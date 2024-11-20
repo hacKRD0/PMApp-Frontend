@@ -48,10 +48,23 @@ export const fetchPortfolio = async (date: string) => {
   return response.data;
 };
 
-// Update stock
-export const updateStock = async (stockData: { stockId: number, stockReferenceId?: number; sectorId?: number }) => {
+// Update stockMaster
+export const updateStockMaster = async (stockData: { stockId: number, stockReferenceId?: number; }) => {
   const requestBody = JSON.stringify(stockData);
-  const response = await api.put(`/portfolio/updateStock/`, requestBody);
+  const response = await api.put(`/portfolio/updateStockMaster/`, requestBody);
+  return response.data;
+};
+
+// Update stockReference
+export const updateStockReference = async (referenceData: { stockReferenceId: number, sectorId?: number; }) => {
+  const requestBody = JSON.stringify(referenceData);
+  const response = await api.put(`/portfolio/updateStockReference/`, requestBody);
+  return response.data;
+};
+
+// Delete stockReference
+export const deleteStockReference = async (stockReferenceId: number) => {
+  const response = await api.delete(`/portfolio/deleteStockReference/`, { data: { stockReferenceId } });
   return response.data;
 };
 
@@ -65,11 +78,12 @@ export const uploadFile = async (formData: FormData) => {
   return response.data;
 };
 
-// Delete stock
-export const deleteStock = async (stockId: number) => {
-  const response = await api.delete(`/portfolio/deleteStock/`, { data: { stockId } });
+// Add stock reference
+export const addStockReference = async (stockData: { code: string, name: string, SectorId: number }) => {
+  const requestBody = JSON.stringify(stockData);
+  const response = await api.post('/portfolio/stockReference', requestBody);
   return response.data;
-}
+};
 
 // Fetch stock master data
 export const fetchStockMaster = async () => {
@@ -104,10 +118,29 @@ export const getBrokerages = async () => {
   return response.data;
 }
 
+// Get default brokerage
+export const getDefaultBrokerage = async () => {
+  const response = await api.get('/user/defaultBrokerage');
+  return response.data;
+};
+
+// Update default brokerage
+export const updateDefaultBrokerage = async (brokerageId: number) => {
+  const requestBody = JSON.stringify({ brokerageId: brokerageId });
+  const response = await api.put('/user/defaultBrokerage', requestBody);
+  return response.data;
+};
+
 // Add new user to database
 export const addUser = async (email: string, name: string, password: string) => {
   const requestBody = JSON.stringify({ email: email, name: name, password: password });
   const response = await api.post('/auth/register', requestBody);
+  return response.data;
+};
+
+// Get dates when portfolio data is available
+export const getPortfolioDates = async () => {
+  const response = await api.get('/portfolio/dates');
   return response.data;
 };
 

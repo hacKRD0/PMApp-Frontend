@@ -1,5 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { fetchSectors, updateSector, addSector, deleteSector } from '../services/apiService';
+import {
+  fetchSectors,
+  updateSector,
+  addSector,
+  deleteSector,
+} from '../services/apiService';
 
 type Sector = {
   id: number;
@@ -8,11 +13,19 @@ type Sector = {
 
 const SectorMaster: React.FC = () => {
   const [sectors, setSectors] = useState<Sector[]>([]);
-  const [editedSectors, setEditedSectors] = useState<{ [key: number]: Sector }>({});
+  const [editedSectors, setEditedSectors] = useState<{ [key: number]: Sector }>(
+    {}
+  );
+  const [editMode, setEditMode] = useState<{ [key: number]: boolean }>({});
   const [newSectorName, setNewSectorName] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [notification, setNotification] = useState<{
+    message: string;
+    type: 'success' | 'error' | null;
+  }>({
+    message: '',
+    type: null,
+  });
 
-  // Fetch sectors on load
   useEffect(() => {
     const loadSectors = async () => {
       try {
@@ -20,18 +33,22 @@ const SectorMaster: React.FC = () => {
         if (response.success && response.Sectors) {
           setSectors(response.Sectors);
         } else {
-          setError('Error fetching sectors');
+          showNotification('Error fetching sectors.', 'error');
         }
       } catch (error) {
-        setError('Error loading sectors');
         console.error('Error loading sectors:', error);
+        showNotification('Error loading sectors.', 'error');
       }
     };
 
     loadSectors();
   }, []);
 
-  // Handle input changes
+  const showNotification = (message: string, type: 'success' | 'error') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification({ message: '', type: null }), 2000);
+  };
+
   const handleInputChange = (id: number, value: string) => {
     setEditedSectors((prev) => ({
       ...prev,
@@ -39,66 +56,91 @@ const SectorMaster: React.FC = () => {
     }));
   };
 
-  // Save updates for a sector
   const saveSector = async (id: number) => {
     if (editedSectors[id]) {
       try {
         const response = await updateSector(id, editedSectors[id].name);
         if (response.success) {
           setSectors((prev) =>
-            prev.map((sector) => (sector.id === id ? { ...sector, ...editedSectors[id] } : sector))
+            prev.map((sector) =>
+              sector.id === id ? { ...sector, ...editedSectors[id] } : sector
+            )
           );
           setEditedSectors((prev) => {
             const updated = { ...prev };
             delete updated[id];
             return updated;
           });
+          setEditMode((prev) => ({ ...prev, [id]: false }));
+          showNotification('Sector updated successfully.', 'success');
         } else {
-          setError('Failed to update sector');
+          showNotification('Failed to update sector.', 'error');
         }
       } catch (error) {
-        setError('Error updating sector');
         console.error('Error updating sector:', error);
+        showNotification('Error updating sector.', 'error');
       }
     }
   };
 
-  // Add a new sector
+  const cancelEdit = (id: number) => {
+    setEditMode((prev) => ({ ...prev, [id]: false }));
+    setEditedSectors((prev) => {
+      const updated = { ...prev };
+      delete updated[id];
+      return updated;
+    });
+  };
+
   const addNewSector = async () => {
     if (newSectorName.trim()) {
       try {
         const response = await addSector(newSectorName);
         if (response.success && response.sector) {
-          setSectors((prev) => [...prev, response.sector]); // Adjusted for "sector" in response
+          setSectors((prev) => [...prev, response.sector]);
           setNewSectorName('');
+          showNotification('Sector added successfully.', 'success');
         } else {
-          setError('Failed to add new sector');
+          showNotification('Failed to add sector.', 'error');
         }
       } catch (error) {
-        setError('Error adding new sector');
-        console.error('Error adding new sector:', error);
+        console.error('Error adding sector:', error);
+        showNotification('Error adding sector.', 'error');
       }
     }
   };
 
-  // Delete a sector
   const deleteSectorById = async (id: number) => {
     try {
       const response = await deleteSector(id);
       if (response.success) {
         setSectors((prev) => prev.filter((sector) => sector.id !== id));
+        showNotification('Sector deleted successfully.', 'success');
       } else {
-        setError('Failed to delete sector');
+        showNotification('Failed to delete sector.', 'error');
       }
     } catch (error) {
-      setError('Error deleting sector');
       console.error('Error deleting sector:', error);
+      showNotification('Error deleting sector.', 'error');
     }
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md">
+    <div className="bg-white p-6 rounded-lg shadow-md relative">
       <h2 className="text-xl font-semibold mb-4">SectorMaster</h2>
+
+      {/* Notification */}
+      {notification.type && (
+        <div
+          className={`fixed bottom-4 right-4 px-4 py-2 rounded shadow-md ${
+            notification.type === 'success'
+              ? 'bg-green-200 text-green-800'
+              : 'bg-red-200 text-red-800'
+          }`}
+        >
+          {notification.message}
+        </div>
+      )}
 
       {/* Add New Sector Field */}
       <div className="flex items-center space-x-4 mb-6">
@@ -117,8 +159,6 @@ const SectorMaster: React.FC = () => {
         </button>
       </div>
 
-      {error && <p className="text-red-500">{error}</p>}
-
       <table className="min-w-full bg-white border border-gray-200 rounded-lg">
         <thead>
           <tr>
@@ -128,31 +168,56 @@ const SectorMaster: React.FC = () => {
           </tr>
         </thead>
         <tbody>
-          {sectors && sectors.length > 0 ? (
+          {sectors.length > 0 ? (
             sectors.map((sector, index) => (
               <tr key={sector.id}>
                 <td className="py-2 px-4 border-b">{index + 1}</td>
                 <td className="py-2 px-4 border-b">
-                  <input
-                    type="text"
-                    value={editedSectors[sector.id]?.name || sector.name}
-                    onChange={(e) => handleInputChange(sector.id, e.target.value)}
-                    className="w-full px-2 py-1 border rounded"
-                  />
+                  {editMode[sector.id] ? (
+                    <input
+                      type="text"
+                      value={editedSectors[sector.id]?.name || sector.name}
+                      onChange={(e) =>
+                        handleInputChange(sector.id, e.target.value)
+                      }
+                      className="w-full px-2 py-1 border rounded"
+                    />
+                  ) : (
+                    sector.name
+                  )}
                 </td>
                 <td className="py-2 px-4 border-b text-center space-x-2">
-                  <button
-                    onClick={() => saveSector(sector.id)}
-                    className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 focus:outline-none"
-                  >
-                    Save
-                  </button>
-                  <button
-                    onClick={() => deleteSectorById(sector.id)}
-                    className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 focus:outline-none"
-                  >
-                    Delete
-                  </button>
+                  {editMode[sector.id] ? (
+                    <>
+                      <button
+                        onClick={() => saveSector(sector.id)}
+                        className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 focus:outline-none"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={() => deleteSectorById(sector.id)}
+                        className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 focus:outline-none"
+                      >
+                        Delete
+                      </button>
+                      <button
+                        onClick={() => cancelEdit(sector.id)}
+                        className="bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600 focus:outline-none"
+                      >
+                        X
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() =>
+                        setEditMode((prev) => ({ ...prev, [sector.id]: true }))
+                      }
+                      className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 focus:outline-none"
+                    >
+                      Edit
+                    </button>
+                  )}
                 </td>
               </tr>
             ))

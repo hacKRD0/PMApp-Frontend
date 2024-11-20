@@ -1,5 +1,5 @@
 // src/components/Header.tsx
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext'; // Custom context for auth
 import { logout } from '../services/authService'; // Logout function from Firebase
@@ -34,6 +34,9 @@ const Header = () => {
           </Link>
           <Link to="/sectormaster" className="mx-4 text-lg hover:underline">
             Sectormaster
+          </Link>
+          <Link to="/stockreference" className="mx-4 text-lg hover:underline">
+            Stock Reference
           </Link>
         </div>
 
