@@ -1,7 +1,7 @@
-import React, { useContext, useEffect, useState, createContext } from "react";
-import { onAuthStateChanged, User } from "firebase/auth";
-import { auth } from "../firebase";
-import { Navigate } from "react-router-dom";
+import React, { useContext, useEffect, useState, createContext } from 'react';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth } from '../firebase';
+import { Navigate } from 'react-router-dom';
 
 interface AuthContextProps {
   currentUser: User | null;
@@ -13,7 +13,7 @@ const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };
@@ -28,7 +28,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
       setLoading(false); // Loading is complete after checking the auth state
-      console.log('User:', user);
+      // console.log('User:', user);
     });
 
     return unsubscribe; // Clean up the listener on unmount

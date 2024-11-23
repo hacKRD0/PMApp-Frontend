@@ -1,33 +1,64 @@
 import React, { useEffect, useState } from 'react';
-import { fetchPortfolio } from '../services/apiService';
+import ReactDatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+import { fetchPortfolio, getPortfolioDates } from '../services/apiService';
+import { format } from 'date-fns';
 
 const Portfolio: React.FC = () => {
   const [portfolio, setPortfolio] = useState<any[]>([]);
   const [expandedGroups, setExpandedGroups] = useState<{
     [key: string]: boolean;
   }>({});
-  const [viewMode, setViewMode] = useState<'Sector' | 'Brokerage'>('Sector');
-  const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split('T')[0]
+  const [viewMode, setViewMode] = useState<'Sector' | 'Brokerage' | 'Stock'>(
+    'Sector'
   );
+  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
+  const [uploadedDates, setUploadedDates] = useState<string[]>([]); // Dates to highlight
 
+  // Fetch portfolio data for the selected date
   const fetchData = async () => {
-    try {
-      const data = await fetchPortfolio(selectedDate);
-      if (data.success) {
-        setPortfolio(data.portfolio);
+    if (selectedDate) {
+      try {
+        const formattedDate = format(selectedDate, 'yyyy-MM-dd');
+        const data = await fetchPortfolio(formattedDate);
+        if (data.success) {
+          setPortfolio(data.portfolio);
+        }
+      } catch (error) {
+        console.error('Error fetching portfolio:', error);
       }
-    } catch (error) {
-      console.error('Error fetching portfolio:', error);
     }
   };
+
+  // Fetch uploaded dates for highlighting
+  const fetchUploadedDates = async () => {
+    try {
+      const response = await getPortfolioDates();
+      if (response.success) {
+        setUploadedDates(response.dates); // Dates in YYYY-MM-DD format
+      }
+    } catch (error) {
+      console.error('Error fetching uploaded dates:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchUploadedDates();
+  }, []);
 
   useEffect(() => {
     fetchData();
   }, [selectedDate]);
 
-  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSelectedDate(e.target.value);
+  const normalizeToUTC = (date: Date): Date => {
+    return new Date(
+      Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
+    );
+  };
+
+  const isUploadedDate = (date: Date): boolean => {
+    const utcDateString = normalizeToUTC(date).toISOString().split('T')[0];
+    return uploadedDates.includes(utcDateString);
   };
 
   const aggregatePortfolio = () => {
@@ -37,6 +68,8 @@ const Portfolio: React.FC = () => {
         stocks: {
           [key: number]: {
             name: string;
+            brokerageCode: string;
+            brokerage: string;
             qty: number;
             totalCost: number;
             avgCost: number;
@@ -56,13 +89,20 @@ const Portfolio: React.FC = () => {
       const stockReference = stockMaster?.StockReference;
       const groupKey =
         viewMode === 'Sector'
-          ? stockReference?.Sector?.name ||
-            (stockReference ? 'Uncategorized Sector' : 'Unknown Sector')
-          : stockMaster?.Brokerage?.name || 'Unknown Brokerage';
+          ? stockReference?.Sector?.name || 'Unknown'
+          : viewMode === 'Brokerage'
+          ? stockMaster?.Brokerage?.name || 'Unknown Brokerage'
+          : stockReference?.name || 'Unknown';
 
-      const stockId = stockReference?.id || stockMaster?.id || 0;
+      const stockId =
+        viewMode == 'Stock'
+          ? `${stockReference?.id || stockMaster?.id}_${
+              stockMaster?.Brokerage?.id
+            }`
+          : stockReference?.id || stockMaster?.id || 0;
       const stockName =
         stockReference?.name || stockMaster?.BrokerageCode || 'Unknown Stock';
+      const brokerageCode = stockMaster?.BrokerageCode || 'Unknown Code';
 
       const totalCostForStock = stock.Qty * stock.AvgCost;
       const marketPrice =
@@ -84,6 +124,8 @@ const Portfolio: React.FC = () => {
       } else {
         aggregation[groupKey].stocks[stockId] = {
           name: stockName,
+          brokerageCode: brokerageCode,
+          brokerage: stockMaster?.Brokerage?.name || 'Unknown Brokerage',
           qty: stock.Qty,
           totalCost: totalCostForStock,
           avgCost: 0,
@@ -125,14 +167,23 @@ const Portfolio: React.FC = () => {
 
       {/* Date Picker */}
       <div className="mb-4">
-        <label htmlFor="date" className="mr-2 font-semibold text-gray-700">
+        <label
+          htmlFor="date-picker"
+          className="mr-2 font-semibold text-gray-700"
+        >
           Select Date:
         </label>
-        <input
-          type="date"
-          id="date"
-          value={selectedDate}
-          onChange={handleDateChange}
+        <ReactDatePicker
+          selected={selectedDate}
+          onChange={(date) =>
+            setSelectedDate(date ? normalizeToUTC(date) : null)
+          }
+          maxDate={new Date()}
+          dayClassName={(date) =>
+            isUploadedDate(date)
+              ? 'react-datepicker__day--highlighted bg-red-300 text-white'
+              : ''
+          }
           className="p-2 border border-gray-300 rounded"
         />
       </div>
@@ -146,12 +197,13 @@ const Portfolio: React.FC = () => {
           id="viewMode"
           value={viewMode}
           onChange={(e) =>
-            setViewMode(e.target.value as 'Sector' | 'Brokerage')
+            setViewMode(e.target.value as 'Sector' | 'Brokerage' | 'Stock')
           }
           className="p-2 border border-gray-300 rounded"
         >
           <option value="Sector">Sector</option>
           <option value="Brokerage">Brokerage</option>
+          <option value="Stock">Stock</option>
         </select>
       </div>
 
@@ -176,7 +228,7 @@ const Portfolio: React.FC = () => {
                 >
                   <td className="py-2 px-4 border font-semibold">{groupKey}</td>
                   <td className="py-2 px-4 border">
-                    ${aggregatedData[groupKey].totalInvested.toFixed(2)}
+                    ₹{aggregatedData[groupKey].totalInvested.toFixed(2)}
                   </td>
                 </tr>
                 {expandedGroups[groupKey] && (
@@ -185,7 +237,16 @@ const Portfolio: React.FC = () => {
                       <table className="min-w-full bg-white mt-2">
                         <thead>
                           <tr>
-                            <th className="py-2 px-4 border">Stock</th>
+                            {viewMode === 'Stock' ? (
+                              <>
+                                <th className="py-2 px-4 border">
+                                  Brokerage Code
+                                </th>
+                                <th className="py-2 px-4 border">Brokerage</th>
+                              </>
+                            ) : (
+                              <th className="py-2 px-4 border">Stock</th>
+                            )}
                             <th className="py-2 px-4 border">Quantity</th>
                             <th className="py-2 px-4 border">Avg Cost</th>
                             <th className="py-2 px-4 border">Total Value</th>
@@ -195,17 +256,28 @@ const Portfolio: React.FC = () => {
                           {Object.values(aggregatedData[groupKey].stocks).map(
                             (stock, index) => (
                               <tr key={index} className="bg-gray-100">
-                                <td className="py-2 px-4 border">
-                                  {stock.name}
-                                </td>
+                                {viewMode === 'Stock' ? (
+                                  <>
+                                    <td className="py-2 px-4 border">
+                                      {stock.brokerageCode}
+                                    </td>
+                                    <td className="py-2 px-4 border">
+                                      {stock.brokerage}
+                                    </td>
+                                  </>
+                                ) : (
+                                  <td className="py-2 px-4 border">
+                                    {stock.name}
+                                  </td>
+                                )}
                                 <td className="py-2 px-4 border">
                                   {stock.qty}
                                 </td>
                                 <td className="py-2 px-4 border">
-                                  ${stock.avgCost.toFixed(2)}
+                                  ₹{stock.avgCost.toFixed(2)}
                                 </td>
                                 <td className="py-2 px-4 border">
-                                  ${stock.totalValue.toFixed(2)}
+                                  ₹{stock.totalCost.toFixed(2)}
                                 </td>
                               </tr>
                             )
@@ -223,7 +295,7 @@ const Portfolio: React.FC = () => {
           <tfoot>
             <tr className="font-bold">
               <td className="py-2 px-4 border">Total Invested in Portfolio</td>
-              <td className="py-2 px-4 border">${totalInvested.toFixed(2)}</td>
+              <td className="py-2 px-4 border">₹{totalInvested.toFixed(2)}</td>
             </tr>
           </tfoot>
         </table>

@@ -1,11 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { FaCloudUploadAlt } from 'react-icons/fa';
+import ReactDatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import {
   uploadFile,
   getBrokerages,
   getDefaultBrokerage,
   updateDefaultBrokerage,
+  getPortfolioDates,
 } from '../services/apiService';
+import { format } from 'date-fns';
 
 const FileUpload: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -16,21 +20,20 @@ const FileUpload: React.FC = () => {
   const [selectedBrokerage, setSelectedBrokerage] = useState<number | null>(
     null
   );
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [dateError, setDateError] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
+  const [uploadedDates, setUploadedDates] = useState<string[]>([]); // Highlighted dates
   const [defaultBrokerageModal, setDefaultBrokerageModal] = useState(false);
   const [defaultBrokerageId, setDefaultBrokerageId] = useState<number | null>(
     null
   );
 
-  const today = new Date().toISOString().split('T')[0];
-
-  // Fetch brokerages and user's default brokerage
+  // Fetch brokerages, user's default brokerage, and uploaded dates
   useEffect(() => {
     const initialize = async () => {
       try {
         const brokerageResponse = await getBrokerages();
         const userResponse = await getDefaultBrokerage();
+        const uploadedDatesResponse = await getPortfolioDates();
 
         if (brokerageResponse.success && brokerageResponse.Brokerages) {
           setBrokerages(brokerageResponse.Brokerages);
@@ -45,6 +48,10 @@ const FileUpload: React.FC = () => {
           }
         } else {
           setErrorMessage('Failed to fetch user information');
+        }
+
+        if (uploadedDatesResponse.success) {
+          setUploadedDates(uploadedDatesResponse.dates); // Dates are in ISO string format
         }
       } catch (error) {
         setErrorMessage('Error initializing data');
@@ -71,14 +78,15 @@ const FileUpload: React.FC = () => {
     if (fileInput) fileInput.click();
   };
 
-  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = e.target.value;
-    if (selected > today) {
-      setSelectedDate(null);
-      setDateError('Date cannot be in the future.');
-    } else {
-      setSelectedDate(selected);
-      setDateError(null);
+  const normalizeToUTC = (date: Date): Date => {
+    return new Date(
+      Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
+    );
+  };
+
+  const handleDateChange = (date: Date | null) => {
+    if (date) {
+      setSelectedDate(normalizeToUTC(date));
     }
   };
 
@@ -101,36 +109,45 @@ const FileUpload: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    if (!isSubmitDisabled) {
-      try {
-        const formData = new FormData();
-        if (selectedFile)
-          formData.append('file', selectedFile, selectedFile.name);
-        formData.append(
-          'brokerageName',
-          brokerages.find((b) => b.id === selectedBrokerage)?.name || ''
-        );
-        formData.append('date', selectedDate || '');
+    if (!selectedFile || !selectedBrokerage || !selectedDate) return;
 
-        const response = await uploadFile(formData);
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedFile, selectedFile.name);
+      formData.append(
+        'brokerageName',
+        brokerages.find((b) => b.id === selectedBrokerage)?.name || ''
+      );
 
-        if (response.success) {
-          alert('File upload successful!');
-          setSelectedFile(null);
-          setSelectedBrokerage(null);
-          setSelectedDate(null);
-        } else {
-          alert('File upload failed. Please try again.');
+      const formattedDate = format(selectedDate, 'yyyy-MM-dd');
+      formData.append('date', formattedDate);
+
+      const response = await uploadFile(formData);
+
+      if (response.success) {
+        alert('File upload successful!');
+        setSelectedFile(null);
+        setSelectedBrokerage(null);
+        setSelectedDate(new Date());
+
+        const uploadedDatesResponse = await getPortfolioDates();
+        if (uploadedDatesResponse.success) {
+          setUploadedDates(uploadedDatesResponse.dates);
         }
-      } catch (error) {
-        console.error('Error uploading file:', error);
-        alert('An error occurred during file upload. Please try again.');
+      } else {
+        alert('File upload failed. Please try again.');
       }
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      alert('An error occurred during file upload. Please try again.');
     }
   };
 
-  const isSubmitDisabled =
-    !selectedFile || !selectedBrokerage || !selectedDate || !!dateError;
+  const isUploadedDate = (date: Date): boolean => {
+    const utcDateString = normalizeToUTC(date).toISOString().split('T')[0];
+    const formattedDate = format(date, 'yyyy-MM-dd');
+    return uploadedDates.includes(formattedDate);
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
@@ -148,7 +165,6 @@ const FileUpload: React.FC = () => {
             <FaCloudUploadAlt className="text-2xl mr-2" />
             <span className="text-sm">Click to upload CSV</span>
           </button>
-
           <input
             type="file"
             accept=".csv"
@@ -156,7 +172,6 @@ const FileUpload: React.FC = () => {
             className="hidden"
             onChange={handleFileChange}
           />
-
           {errorMessage && (
             <p className="text-red-500 text-sm mt-2">{errorMessage}</p>
           )}
@@ -180,16 +195,23 @@ const FileUpload: React.FC = () => {
         </div>
 
         <div className="mb-4">
-          <input
-            type="date"
-            className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:border-indigo-500"
-            value={selectedDate || ''}
+          <label
+            htmlFor="date-picker"
+            className="mr-2 font-semibold text-gray-700"
+          >
+            Select Date:
+          </label>
+          <ReactDatePicker
+            selected={selectedDate}
             onChange={handleDateChange}
-            max={today}
+            maxDate={new Date()}
+            dayClassName={(date) =>
+              isUploadedDate(date)
+                ? 'react-datepicker__day--highlighted bg-red-300 text-white'
+                : ''
+            }
+            className="p-2 border border-gray-300 rounded"
           />
-          {dateError && (
-            <p className="text-red-500 text-sm mt-2">{dateError}</p>
-          )}
         </div>
 
         {selectedFile && (
@@ -201,9 +223,9 @@ const FileUpload: React.FC = () => {
         <button
           type="button"
           onClick={handleSubmit}
-          disabled={isSubmitDisabled}
+          disabled={!selectedFile || !selectedBrokerage || !selectedDate}
           className={`w-full p-4 rounded-lg text-white ${
-            isSubmitDisabled
+            !selectedFile || !selectedBrokerage || !selectedDate
               ? 'bg-gray-400 cursor-not-allowed'
               : 'bg-indigo-500 hover:bg-indigo-600'
           }`}
