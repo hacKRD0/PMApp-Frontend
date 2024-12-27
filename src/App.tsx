@@ -8,20 +8,31 @@ import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
 import UploadPage from './pages/UploadPage.tsx';
 import PortfolioPage from './pages/PortfolioPage.tsx';
-import StockMasterPage from './pages/StockMasterPage.tsx';
+import StockMapperPage from './pages/StockMapperPage.tsx';
 import SectorMasterPage from './pages/SectorMasterPage.tsx';
-import StockReferencePage from './pages/StockReferencePage.tsx';
+import StockMasterPage from './pages/StockMasterPage.tsx';
+import NotFound from './pages/404.tsx';
+import HomePage from './pages/HomePage.tsx';
 
 function App() {
   return (
     <AuthProvider>
       <Router>
         <Routes>
+          <Route path="*" element={<NotFound />}></Route>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           {/* Protected route example */}
           <Route
             path="/"
+            element={
+              <ProtectedRoute>
+                <HomePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/upload"
             element={
               <ProtectedRoute>
                 <UploadPage />
@@ -43,7 +54,7 @@ function App() {
             element={
               <ProtectedRoute>
                 {' '}
-                <StockMasterPage />
+                <StockMapperPage />
               </ProtectedRoute>
             }
           />{' '}
@@ -63,7 +74,7 @@ function App() {
             element={
               <ProtectedRoute>
                 {' '}
-                <StockReferencePage />
+                <StockMasterPage />
               </ProtectedRoute>
             }
           />{' '}

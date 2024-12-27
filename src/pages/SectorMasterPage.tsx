@@ -2,6 +2,7 @@
 import React from 'react';
 import Header from '../components/Header';
 import SectorMaster from '../components/SectorMaster';
+import Footer from '../components/Footer';
 
 const SectorMasterPage: React.FC = () => {
   return (
@@ -10,6 +11,7 @@ const SectorMasterPage: React.FC = () => {
       <div className="container mx-auto py-8">
         <SectorMaster />
       </div>
+      <Footer />
     </>
   );
 };

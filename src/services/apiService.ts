@@ -48,12 +48,17 @@ export const fetchPortfolio = async (date: string) => {
   return response.data;
 };
 
-// Update stockMaster
-export const updateStockMaster = async (stockData: { stockId: number, stockReferenceId?: number; }) => {
-  const requestBody = JSON.stringify(stockData);
+// Update stockMaster for multiple stocks
+export const updateStockMaster = async (stocks: { stockId: number; stockReferenceId?: number }[]) => {
+  if (!Array.isArray(stocks) || stocks.length === 0) {
+    throw new Error('The stocks array is required and must not be empty.');
+  }
+
+  const requestBody = JSON.stringify({ stocks });
   const response = await api.put(`/portfolio/updateStockMaster/`, requestBody);
   return response.data;
 };
+
 
 // Update stockReference
 export const updateStockReference = async (referenceData: { stockReferenceId: number, sectorId?: number; }) => {

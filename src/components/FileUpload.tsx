@@ -71,6 +71,9 @@ const FileUpload: React.FC = () => {
       setSelectedFile(null);
       setErrorMessage('Please upload a valid .csv file.');
     }
+    if (e.target) {
+      e.target.value = ''; // Reset file input to allow re-selection of the same file
+    }
   };
 
   const handleButtonClick = () => {
@@ -130,9 +133,14 @@ const FileUpload: React.FC = () => {
         setSelectedBrokerage(null);
         setSelectedDate(new Date());
 
-        const uploadedDatesResponse = await getPortfolioDates();
-        if (uploadedDatesResponse.success) {
-          setUploadedDates(uploadedDatesResponse.dates);
+        try {
+          const uploadedDatesResponse = await getPortfolioDates();
+          if (uploadedDatesResponse?.success) {
+            setUploadedDates(uploadedDatesResponse.dates);
+          }
+        } catch (error) {
+          console.error('Error fetching uploaded dates:', error);
+          alert('An error occurred while updating uploaded dates.');
         }
       } else {
         alert('File upload failed. Please try again.');
@@ -150,10 +158,10 @@ const FileUpload: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+    <div className="h-fit flex items-center justify-center bg-gray-100">
       <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
         <h2 className="text-xl font-semibold mb-6 text-gray-800">
-          Upload Your Portfolio CSV
+          Upload Your Holdings CSV
         </h2>
 
         <div className="mb-4 flex flex-col items-center justify-center">
