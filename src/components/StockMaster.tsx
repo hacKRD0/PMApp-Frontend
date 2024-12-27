@@ -227,6 +227,14 @@ const StockReferenceMaster: React.FC = () => {
           type: 'success',
         });
 
+        setEditedStockReferences((prev) => ({
+          ...prev,
+          [id]: {
+            ...prev[id],
+            SectorId: response.sector.id,
+          },
+        }));
+
         // Reset the adding state
         setIsAddingSector((prev) => ({ ...prev, [id]: false }));
         setNewSectorName((prev) => {
@@ -398,10 +406,7 @@ const StockReferenceMaster: React.FC = () => {
                           }
                           className="w-full px-2 py-1 border rounded"
                         >
-                          <option value="">
-                            <FaPlus className="inline-block mr-2 text-sm" />
-                            Add Sector
-                          </option>
+                          <option value="">Select Sector</option>
                           {sectors.map((sector) => (
                             <option key={sector.id} value={sector.id}>
                               {sector.name}

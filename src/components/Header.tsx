@@ -57,13 +57,13 @@ const Header = () => {
           <Link to="/portfolio" className="mx-4 text-lg hover:underline">
             Portfolio
           </Link>
-          <Link to="/stockmaster" className="mx-4 text-lg hover:underline">
+          <Link to="/stockmapper" className="mx-4 text-lg hover:underline">
             Stock Mapper
           </Link>
           <Link to="/sectormaster" className="mx-4 text-lg hover:underline">
             Sector Master
           </Link>
-          <Link to="/stockreference" className="mx-4 text-lg hover:underline">
+          <Link to="/stockmaster" className="mx-4 text-lg hover:underline">
             Stock Master
           </Link>
         </div>
