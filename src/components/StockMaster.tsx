@@ -1,15 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import {
-  fetchStockReferences,
+  fetchStockMasters,
   fetchSectors,
-  updateStockReference,
-  deleteStockReference,
-  addStockReference,
+  updateStockMaster,
+  deleteStockMaster,
+  addStockMaster,
   addSector,
 } from '../services/apiService';
 import { FaPlus } from 'react-icons/fa';
 
-type StockReference = {
+type StockMaster = {
   id: number;
   name: string;
   code: string;
@@ -25,14 +25,14 @@ type Sector = {
   name: string;
 };
 
-const StockReferenceMaster: React.FC = () => {
-  const [stockReferences, setStockReferences] = useState<StockReference[]>([]);
+const StockMasterMaster: React.FC = () => {
+  const [stockMasters, setStockMasters] = useState<StockMaster[]>([]);
   const [sectors, setSectors] = useState<Sector[]>([]);
-  const [editedStockReferences, setEditedStockReferences] = useState<{
-    [key: number]: Partial<StockReference>;
+  const [editedStockMasters, setEditedStockMasters] = useState<{
+    [key: number]: Partial<StockMaster>;
   }>({});
   const [editMode, setEditMode] = useState<{ [key: number]: boolean }>({});
-  const [newStockReference, setNewStockReference] = useState({
+  const [newStockMaster, setNewStockMaster] = useState({
     name: '',
     code: '',
     SectorId: 0,
@@ -51,14 +51,11 @@ const StockReferenceMaster: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const stockReferencesResponse = await fetchStockReferences();
+        const stockMastersResponse = await fetchStockMasters();
         const sectorsResponse = await fetchSectors();
 
-        if (
-          stockReferencesResponse.success &&
-          stockReferencesResponse.stockReferences
-        ) {
-          setStockReferences(stockReferencesResponse.stockReferences);
+        if (stockMastersResponse.success && stockMastersResponse.stockMasters) {
+          setStockMasters(stockMastersResponse.stockMasters);
         }
 
         if (sectorsResponse.success && sectorsResponse.Sectors) {
@@ -74,26 +71,26 @@ const StockReferenceMaster: React.FC = () => {
 
   const handleInputChange = (
     id: number,
-    field: keyof StockReference,
+    field: keyof StockMaster,
     value: string | number
   ) => {
-    setEditedStockReferences((prev) => ({
+    setEditedStockMasters((prev) => ({
       ...prev,
       [id]: { ...prev[id], [field]: value },
     }));
   };
 
-  const saveStockReference = async (id: number) => {
-    if (editedStockReferences[id]) {
+  const saveStockMaster = async (id: number) => {
+    if (editedStockMasters[id]) {
       try {
-        const updatedData = editedStockReferences[id];
-        const response = await updateStockReference({
-          stockReferenceId: id,
+        const updatedData = editedStockMasters[id];
+        const response = await updateStockMaster({
+          stockMasterId: id,
           sectorId: updatedData.SectorId as number,
         });
 
         if (response.success) {
-          setStockReferences((prev) =>
+          setStockMasters((prev) =>
             prev.map((ref) =>
               ref.id === id
                 ? {
@@ -131,18 +128,18 @@ const StockReferenceMaster: React.FC = () => {
 
   const cancelEdit = (id: number) => {
     setEditMode((prev) => ({ ...prev, [id]: false }));
-    setEditedStockReferences((prev) => {
+    setEditedStockMasters((prev) => {
       const updated = { ...prev };
       delete updated[id];
       return updated;
     });
   };
 
-  const deleteStockReferenceById = async (id: number) => {
+  const deleteStockMasterById = async (id: number) => {
     try {
-      const response = await deleteStockReference(id);
+      const response = await deleteStockMaster(id);
       if (response.success) {
-        setStockReferences((prev) => prev.filter((ref) => ref.id !== id));
+        setStockMasters((prev) => prev.filter((ref) => ref.id !== id));
         setNotification({
           message: 'Stock reference deleted successfully.',
           type: 'success',
@@ -164,17 +161,17 @@ const StockReferenceMaster: React.FC = () => {
     }
   };
 
-  const addNewStockReference = async () => {
+  const addNewStockMaster = async () => {
     if (
-      newStockReference.name.trim() &&
-      newStockReference.code.trim() &&
-      newStockReference.SectorId
+      newStockMaster.name.trim() &&
+      newStockMaster.code.trim() &&
+      newStockMaster.SectorId
     ) {
       try {
-        const response = await addStockReference(newStockReference);
-        if (response.success && response.stockReference) {
-          setStockReferences((prev) => [...prev, response.stockReference]);
-          setNewStockReference({ name: '', code: '', SectorId: 0 });
+        const response = await addStockMaster(newStockMaster);
+        if (response.success && response.stockMaster) {
+          setStockMasters((prev) => [...prev, response.stockMaster]);
+          setNewStockMaster({ name: '', code: '', SectorId: 0 });
           setNotification({
             message: 'New stock reference added successfully.',
             type: 'success',
@@ -227,7 +224,7 @@ const StockReferenceMaster: React.FC = () => {
           type: 'success',
         });
 
-        setEditedStockReferences((prev) => ({
+        setEditedStockMasters((prev) => ({
           ...prev,
           [id]: {
             ...prev[id],
@@ -285,9 +282,9 @@ const StockReferenceMaster: React.FC = () => {
         <div className="grid grid-cols-3 gap-4">
           <input
             type="text"
-            value={newStockReference.name}
+            value={newStockMaster.name}
             onChange={(e) =>
-              setNewStockReference((prev) => ({
+              setNewStockMaster((prev) => ({
                 ...prev,
                 name: e.target.value,
               }))
@@ -297,9 +294,9 @@ const StockReferenceMaster: React.FC = () => {
           />
           <input
             type="text"
-            value={newStockReference.code}
+            value={newStockMaster.code}
             onChange={(e) =>
-              setNewStockReference((prev) => ({
+              setNewStockMaster((prev) => ({
                 ...prev,
                 code: e.target.value,
               }))
@@ -308,9 +305,9 @@ const StockReferenceMaster: React.FC = () => {
             className="px-2 py-1 border rounded"
           />
           <select
-            value={newStockReference.SectorId}
+            value={newStockMaster.SectorId}
             onChange={(e) =>
-              setNewStockReference((prev) => ({
+              setNewStockMaster((prev) => ({
                 ...prev,
                 SectorId: Number(e.target.value),
               }))
@@ -326,7 +323,7 @@ const StockReferenceMaster: React.FC = () => {
           </select>
         </div>
         <button
-          onClick={addNewStockReference}
+          onClick={addNewStockMaster}
           className="mt-4 bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 focus:outline-none"
         >
           Add
@@ -336,15 +333,15 @@ const StockReferenceMaster: React.FC = () => {
       <table className="min-w-full bg-white border border-gray-200 rounded-lg">
         <thead>
           <tr>
-            <th className="py-2 px-4 border-b">Stock Name</th>
+            <th className="py-2 px-4 border-b">Stock Code</th>
             <th className="py-2 px-4 border-b">Sector</th>
             <th className="py-2 px-4 border-b">Actions</th>
           </tr>
         </thead>
         <tbody>
-          {stockReferences.map((ref) => (
+          {stockMasters.map((ref) => (
             <tr key={ref.id}>
-              <td className="py-2 px-4 border-b">{ref.name}</td>
+              <td className="py-2 px-4 border-b">{ref.code}</td>
               <td className="py-2 px-4 border-b">
                 {editMode[ref.id] ? (
                   <div className="flex items-center justify-center">
@@ -394,8 +391,7 @@ const StockReferenceMaster: React.FC = () => {
                       <div className="flex items-center space-x-2">
                         <select
                           value={
-                            editedStockReferences[ref.id]?.SectorId ||
-                            ref.SectorId
+                            editedStockMasters[ref.id]?.SectorId || ref.SectorId
                           }
                           onChange={(e) =>
                             handleInputChange(
@@ -433,13 +429,13 @@ const StockReferenceMaster: React.FC = () => {
                 {editMode[ref.id] ? (
                   <>
                     <button
-                      onClick={() => saveStockReference(ref.id)}
+                      onClick={() => saveStockMaster(ref.id)}
                       className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 focus:outline-none"
                     >
                       Save
                     </button>
                     <button
-                      onClick={() => deleteStockReferenceById(ref.id)}
+                      onClick={() => deleteStockMasterById(ref.id)}
                       className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 focus:outline-none"
                     >
                       Delete
@@ -470,4 +466,4 @@ const StockReferenceMaster: React.FC = () => {
   );
 };
 
-export default StockReferenceMaster;
+export default StockMasterMaster;

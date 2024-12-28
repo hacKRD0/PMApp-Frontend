@@ -50,7 +50,7 @@ function App() {
           />{' '}
           {/* Add PortfolioPage route */}
           <Route
-            path="/stockmaster"
+            path="/stockmapper"
             element={
               <ProtectedRoute>
                 {' '}
@@ -58,7 +58,7 @@ function App() {
               </ProtectedRoute>
             }
           />{' '}
-          {/* Add StockMasterPage route */}
+          {/* Add StockMapperPage route */}
           <Route
             path="/sectormaster"
             element={
@@ -68,9 +68,9 @@ function App() {
               </ProtectedRoute>
             }
           />{' '}
-          {/* Add StockMasterPage route */}
+          {/* Add StockMapperPage route */}
           <Route
-            path="/stockreference"
+            path="/stockmaster"
             element={
               <ProtectedRoute>
                 {' '}
@@ -78,7 +78,7 @@ function App() {
               </ProtectedRoute>
             }
           />{' '}
-          {/* Add StockReferencePage route */}
+          {/* Add StockMasterPage route */}
         </Routes>
       </Router>
     </AuthProvider>

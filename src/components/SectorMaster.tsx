@@ -112,7 +112,7 @@ const SectorMaster: React.FC = () => {
 
   const deleteSectorById = async (id: number) => {
     try {
-      const response = await deleteSector(id);
+      const response = await deleteSector([id]);
       if (response.success) {
         setSectors((prev) => prev.filter((sector) => sector.id !== id));
         showNotification('Sector deleted successfully.', 'success');

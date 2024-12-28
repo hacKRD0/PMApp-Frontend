@@ -30,8 +30,8 @@ api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
 });
 
 // Fetch stocks
-export const fetchStockReferences = async () => {
-  const response = await api.get('/portfolio/stockReferences');
+export const fetchStockMasters = async () => {
+  const response = await api.get('/portfolio/stockMasters');
   return response.data;
 };
 
@@ -48,28 +48,28 @@ export const fetchPortfolio = async (date: string) => {
   return response.data;
 };
 
-// Update stockMaster for multiple stocks
-export const updateStockMaster = async (stocks: { stockId: number; stockReferenceId?: number }[]) => {
+// Update stockMapper for multiple stocks
+export const updateStockMapper = async (stocks: { stockId: number; stockMasterId?: number }[]) => {
   if (!Array.isArray(stocks) || stocks.length === 0) {
     throw new Error('The stocks array is required and must not be empty.');
   }
 
   const requestBody = JSON.stringify({ stocks });
+  const response = await api.put(`/portfolio/updateStockMapper/`, requestBody);
+  return response.data;
+};
+
+
+// Update stockMaster
+export const updateStockMaster = async (referenceData: { stockMasterId: number, sectorId?: number; }) => {
+  const requestBody = JSON.stringify(referenceData);
   const response = await api.put(`/portfolio/updateStockMaster/`, requestBody);
   return response.data;
 };
 
-
-// Update stockReference
-export const updateStockReference = async (referenceData: { stockReferenceId: number, sectorId?: number; }) => {
-  const requestBody = JSON.stringify(referenceData);
-  const response = await api.put(`/portfolio/updateStockReference/`, requestBody);
-  return response.data;
-};
-
-// Delete stockReference
-export const deleteStockReference = async (stockReferenceId: number) => {
-  const response = await api.delete(`/portfolio/deleteStockReference/`, { data: { stockReferenceId } });
+// Delete stockMaster
+export const deleteStockMaster = async (stockMasterId: number) => {
+  const response = await api.delete(`/portfolio/deleteStockMaster/`, { data: { stockMasterId } });
   return response.data;
 };
 
@@ -84,15 +84,15 @@ export const uploadFile = async (formData: FormData) => {
 };
 
 // Add stock reference
-export const addStockReference = async (stockData: { code: string, name: string, SectorId: number }) => {
+export const addStockMaster = async (stockData: { code: string, name: string, SectorId: number }) => {
   const requestBody = JSON.stringify(stockData);
-  const response = await api.post('/portfolio/stockReference', requestBody);
+  const response = await api.post('/portfolio/stockMaster', requestBody);
   return response.data;
 };
 
 // Fetch stock master data
-export const fetchStockMaster = async () => {
-  const response = await api.get('/portfolio/stockMaster');
+export const fetchStockMapper = async () => {
+  const response = await api.get('/portfolio/stockMapper');
   return response.data;
 };
 
@@ -111,9 +111,12 @@ export const addSector = async (sectorName: string) => {
 };
 
 // Delete sector
-export const deleteSector = async (sectorId: number) => {
-  const requestBody = JSON.stringify({ sectorId: sectorId });
-  const response = await api.delete(`/portfolio/deleteSector/`, { data: requestBody });
+export const deleteSector = async (sectorIds: [number]) => {
+  if (!Array.isArray(sectorIds)) {
+    throw new Error('The sectorIds array is required.');
+  }
+  const requestBody = JSON.stringify({ sectorIds: sectorIds });
+  const response = await api.delete(`/portfolio/deleteSectors/`, { data: requestBody });
   return response.data;
 };
 

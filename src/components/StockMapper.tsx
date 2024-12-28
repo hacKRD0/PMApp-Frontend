@@ -1,26 +1,26 @@
 import React, { useEffect, useState } from 'react';
 import {
-  fetchStockMaster,
-  fetchStockReferences,
-  updateStockMaster,
+  fetchStockMapper,
+  fetchStockMasters,
+  updateStockMapper,
 } from '../services/apiService';
 
 type Stock = {
   id: number;
-  brokerageStockName: string;
+  brokerageStockCode: string;
   referenceId: string;
   brokerage: string;
 };
 
-type StockReference = {
+type StockMaster = {
   id: number;
   name: string;
   code: string;
 };
 
-const StockMaster: React.FC = () => {
+const StockMapper: React.FC = () => {
   const [stocks, setStocks] = useState<Stock[]>([]);
-  const [stockReferences, setStockReferences] = useState<StockReference[]>([]);
+  const [stockMasters, setStockMasters] = useState<StockMaster[]>([]);
   const [editedStocks, setEditedStocks] = useState<{ [key: number]: string }>(
     {}
   );
@@ -33,41 +33,39 @@ const StockMaster: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const stockMasterResponse = await fetchStockMaster();
-        const stockReferencesResponse = await fetchStockReferences();
+        const stockMapperResponse = await fetchStockMapper();
+        const stockMastersResponse = await fetchStockMasters();
 
-        if (stockMasterResponse.success && stockMasterResponse.StockMaster) {
-          const formattedStocks = stockMasterResponse.StockMaster.map(
+        if (stockMapperResponse.success && stockMapperResponse.stockMapper) {
+          const formattedStocks = stockMapperResponse.stockMapper.map(
             (item: any) => ({
               id: item.id,
-              brokerageStockName: item.BrokerageCode,
-              referenceId: item.StockReference?.code || '-',
+              brokerageStockCode: item.BrokerageCode,
+              referenceId: item.StockMaster?.code || '-',
               brokerage: item.Brokerage?.name || 'Unknown Brokerage',
             })
           );
           setStocks(formattedStocks);
         } else {
           console.error(
-            'StockMaster data is missing or not successful:',
-            stockMasterResponse
+            'StockMapper data is missing or not successful:',
+            stockMapperResponse
           );
         }
 
-        if (
-          stockReferencesResponse.success &&
-          stockReferencesResponse.stockReferences
-        ) {
-          const formattedReferences =
-            stockReferencesResponse.stockReferences.map((ref: any) => ({
+        if (stockMastersResponse.success && stockMastersResponse.stockMasters) {
+          const formattedReferences = stockMastersResponse.stockMasters.map(
+            (ref: any) => ({
               id: ref.id,
               name: ref.name,
               code: ref.code,
-            }));
-          setStockReferences(formattedReferences);
+            })
+          );
+          setStockMasters(formattedReferences);
         } else {
           console.error(
-            'StockReferences data is missing or not successful:',
-            stockReferencesResponse
+            'StockMasters data is missing or not successful:',
+            stockMastersResponse
           );
         }
       } catch (error) {
@@ -87,11 +85,11 @@ const StockMaster: React.FC = () => {
     const stocksToUpdate = Object.entries(editedStocks).map(
       ([id, referenceId]) => {
         const stockId = parseInt(id, 10);
-        const stockReference = stockReferences.find(
+        const stockMaster = stockMasters.find(
           (ref) => ref.code === referenceId
         );
 
-        if (!stockReference) {
+        if (!stockMaster) {
           showNotification(
             'error',
             `Invalid stock reference for stock ID ${id}.`
@@ -99,12 +97,12 @@ const StockMaster: React.FC = () => {
           return null;
         }
 
-        return { stockId, stockReferenceId: stockReference.id };
+        return { stockId, stockMasterId: stockMaster.id };
       }
     );
 
     const validStocksToUpdate = stocksToUpdate.filter(
-      (stock): stock is { stockId: number; stockReferenceId: number } =>
+      (stock): stock is { stockId: number; stockMasterId: number } =>
         stock !== null
     );
 
@@ -114,23 +112,23 @@ const StockMaster: React.FC = () => {
     }
 
     try {
-      const response = await updateStockMaster(validStocksToUpdate);
+      const response = await updateStockMapper(validStocksToUpdate);
 
       if (response.success) {
         const updatedStockMap = new Map(
           response.updatedStocks.map((stock: any) => {
-            const stockReference = stockReferences.find(
-              (ref) => ref.id === stock.StockReferenceId
+            const stockMaster = stockMasters.find(
+              (ref) => ref.id === stock.StockMasterId
             );
 
-            if (!stockReference) {
+            if (!stockMaster) {
               console.error(
-                `StockReference not found for StockReferenceId: ${stock.StockReferenceId}`
+                `StockMaster not found for StockMasterId: ${stock.StockMasterId}`
               );
               return [stock.id, null];
             }
 
-            return [stock.id, stockReference.code];
+            return [stock.id, stockMaster.code];
           })
         );
 
@@ -188,7 +186,7 @@ const StockMaster: React.FC = () => {
       <table className="min-w-full bg-white border border-gray-200 rounded-lg">
         <thead>
           <tr>
-            <th className="py-2 px-4 border-b">Brokerage Stock Name</th>
+            <th className="py-2 px-4 border-b">Brokerage Stock Code</th>
             <th className="py-2 px-4 border-b">Stock Master Code</th>
             <th className="py-2 px-4 border-b">Brokerage</th>
           </tr>
@@ -196,7 +194,7 @@ const StockMaster: React.FC = () => {
         <tbody>
           {stocks.map((stock) => (
             <tr key={stock.id}>
-              <td className="py-2 px-4 border-b">{stock.brokerageStockName}</td>
+              <td className="py-2 px-4 border-b">{stock.brokerageStockCode}</td>
               <td className="py-2 px-4 border-b">
                 {isEditMode ? (
                   <select
@@ -207,7 +205,7 @@ const StockMaster: React.FC = () => {
                     className="w-full px-2 py-1 border rounded"
                   >
                     <option value="">Select Reference</option>
-                    {stockReferences.map((ref) => (
+                    {stockMasters.map((ref) => (
                       <option key={ref.id} value={ref.code}>
                         {ref.name}
                       </option>
@@ -254,4 +252,4 @@ const StockMaster: React.FC = () => {
   );
 };
 
-export default StockMaster;
+export default StockMapper;

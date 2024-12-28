@@ -85,30 +85,29 @@ const Portfolio: React.FC = () => {
     };
 
     portfolio.forEach((stock) => {
-      const stockMaster = stock.StockMaster;
-      const stockReference = stockMaster?.StockReference;
+      const stockMapper = stock.StockMapper;
+      const stockMaster = stockMapper?.StockMaster;
       const groupKey =
         viewMode === 'Sector'
-          ? stockReference?.Sector?.name || 'Unknown'
+          ? stockMaster?.Sector?.name || 'Unknown'
           : viewMode === 'Brokerage'
-          ? stockMaster?.Brokerage?.name || 'Unknown Brokerage'
-          : stockReference?.name || 'Unknown';
+          ? stockMapper?.Brokerage?.name || 'Unknown Brokerage'
+          : stockMaster?.name || 'Unknown';
 
       const stockId =
         viewMode == 'Stock'
-          ? `${stockReference?.id || stockMaster?.id}_${
-              stockMaster?.Brokerage?.id
+          ? `${stockMaster?.id || stockMapper?.id}_${
+              stockMapper?.Brokerage?.id
             }`
-          : stockReference?.id || stockMaster?.id || 0;
+          : stockMaster?.id || stockMapper?.id || 0;
       const stockName =
-        stockReference?.name || stockMaster?.BrokerageCode || 'Unknown Stock';
-      const brokerageCode = stockMaster?.BrokerageCode || 'Unknown Code';
+        stockMaster?.name || stockMapper?.BrokerageCode || 'Unknown Stock';
+      const brokerageCode = stockMapper?.BrokerageCode || 'Unknown Code';
 
       const totalCostForStock = stock.Qty * stock.AvgCost;
       const marketPrice =
-        currentPrices[
-          stockReference?.code || stockMaster?.BrokerageCode || ''
-        ] || 0;
+        currentPrices[stockMaster?.code || stockMapper?.BrokerageCode || ''] ||
+        0;
       const stockValue = stock.Qty * marketPrice;
 
       if (!aggregation[groupKey]) {
@@ -125,7 +124,7 @@ const Portfolio: React.FC = () => {
         aggregation[groupKey].stocks[stockId] = {
           name: stockName,
           brokerageCode: brokerageCode,
-          brokerage: stockMaster?.Brokerage?.name || 'Unknown Brokerage',
+          brokerage: stockMapper?.Brokerage?.name || 'Unknown Brokerage',
           qty: stock.Qty,
           totalCost: totalCostForStock,
           avgCost: 0,

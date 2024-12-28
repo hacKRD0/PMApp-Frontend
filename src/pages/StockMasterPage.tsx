@@ -1,4 +1,4 @@
-// src/pages/StockMasterPage.tsx
+// src/pages/StockMapperPage.tsx
 import React from 'react';
 import Header from '../components/Header';
 import StockMaster from '../components/StockMaster';

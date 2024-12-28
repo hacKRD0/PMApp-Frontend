@@ -118,8 +118,8 @@ const FileUpload: React.FC = () => {
       const formData = new FormData();
       formData.append('file', selectedFile, selectedFile.name);
       formData.append(
-        'brokerageName',
-        brokerages.find((b) => b.id === selectedBrokerage)?.name || ''
+        'brokerageId',
+        selectedBrokerage ? selectedBrokerage.toString() : ''
       );
 
       const formattedDate = format(selectedDate, 'yyyy-MM-dd');
