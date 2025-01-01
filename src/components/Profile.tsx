@@ -1,5 +1,5 @@
 // src/components/Profile.tsx
-// import React from 'react';
+import React from 'react';
 
 const Profile = () => {
   return (

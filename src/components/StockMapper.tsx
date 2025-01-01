@@ -1,15 +1,23 @@
-import React, { useEffect, useState } from 'react';
+// StockMapper.tsx
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   fetchStockMapper,
   fetchStockMasters,
+  fetchSectors, // Ensure this API exists
+  getBrokerages, // Ensure this API exists
   updateStockMapper,
 } from '../services/apiService';
+import Filter from './Filter'; // Adjust the import path as necessary
+import { FaArrowUpAZ, FaArrowDownZA } from 'react-icons/fa6';
+import { FaEdit, FaSave, FaTrash } from 'react-icons/fa';
 
+// Define your types
 type Stock = {
   id: number;
   brokerageStockCode: string;
   referenceId: string;
   brokerage: string;
+  sector: string; // Assuming each stock has a sector
 };
 
 type StockMaster = {
@@ -18,9 +26,21 @@ type StockMaster = {
   code: string;
 };
 
+type Sector = {
+  id: number;
+  name: string;
+};
+
+type Brokerage = {
+  id: number;
+  name: string;
+};
+
 const StockMapper: React.FC = () => {
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [stockMasters, setStockMasters] = useState<StockMaster[]>([]);
+  const [sectors, setSectors] = useState<Sector[]>([]);
+  const [brokerages, setBrokerages] = useState<Brokerage[]>([]);
   const [editedStocks, setEditedStocks] = useState<{ [key: number]: string }>(
     {}
   );
@@ -30,19 +50,50 @@ const StockMapper: React.FC = () => {
   } | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
 
+  // Filter states
+  const [filters, setFilters] = useState<{
+    sectorIds?: number[];
+    brokerageIds?: number[];
+    code?: string;
+  }>({});
+
+  // Sorting states
+  const [sortConfig, setSortConfig] = useState<{
+    key: keyof Stock;
+    direction: 'asc' | 'desc';
+  } | null>(null);
+
+  // Memoize availableFilters to prevent unnecessary re-renders
+  const availableFilters = useMemo<Array<'sector' | 'brokerage' | 'code'>>(
+    () => ['sector', 'brokerage', 'code'],
+    []
+  );
+
+  // Fetch all necessary data on mount
   useEffect(() => {
     const loadData = async () => {
       try {
-        const stockMapperResponse = await fetchStockMapper();
-        const stockMastersResponse = await fetchStockMasters();
+        const [
+          stockMapperResponse,
+          stockMastersResponse,
+          sectorsResponse,
+          brokeragesResponse,
+        ] = await Promise.all([
+          fetchStockMapper(),
+          fetchStockMasters(),
+          fetchSectors(),
+          getBrokerages(),
+        ]);
 
+        // Process Stock Mapper Data
         if (stockMapperResponse.success && stockMapperResponse.stockMapper) {
-          const formattedStocks = stockMapperResponse.stockMapper.map(
+          const formattedStocks: Stock[] = stockMapperResponse.stockMapper.map(
             (item: any) => ({
               id: item.id,
               brokerageStockCode: item.BrokerageCode,
               referenceId: item.StockMaster?.code || '-',
               brokerage: item.Brokerage?.name || 'Unknown Brokerage',
+              sector: item.StockMaster?.Sector?.name || 'Unknown Sector', // Ensure Sector is derived via StockMaster
             })
           );
           setStocks(formattedStocks);
@@ -51,48 +102,122 @@ const StockMapper: React.FC = () => {
             'StockMapper data is missing or not successful:',
             stockMapperResponse
           );
+          showNotification('error', 'Error fetching stock mappings.');
         }
 
+        // Process Stock Masters Data
         if (stockMastersResponse.success && stockMastersResponse.stockMasters) {
-          const formattedReferences = stockMastersResponse.stockMasters.map(
-            (ref: any) => ({
+          const formattedStockMasters: StockMaster[] =
+            stockMastersResponse.stockMasters.map((ref: any) => ({
               id: ref.id,
               name: ref.name,
               code: ref.code,
-            })
-          );
-          setStockMasters(formattedReferences);
+            }));
+          setStockMasters(formattedStockMasters);
         } else {
           console.error(
             'StockMasters data is missing or not successful:',
             stockMastersResponse
           );
+          showNotification('error', 'Error fetching stock masters.');
+        }
+
+        // Process Sectors Data
+        if (sectorsResponse.success && sectorsResponse.Sectors) {
+          const formattedSectors: Sector[] = sectorsResponse.Sectors.map(
+            (sector: any) => ({
+              id: sector.id,
+              name: sector.name,
+            })
+          );
+          setSectors(formattedSectors);
+        } else {
+          console.error(
+            'Sectors data is missing or not successful:',
+            sectorsResponse
+          );
+          showNotification('error', 'Error fetching sectors.');
+        }
+
+        // Process Brokerages Data
+        if (brokeragesResponse.success && brokeragesResponse.Brokerages) {
+          const formattedBrokerages: Brokerage[] =
+            brokeragesResponse.Brokerages.map((brokerage: any) => ({
+              id: brokerage.id,
+              name: brokerage.name,
+            }));
+          setBrokerages(formattedBrokerages);
+        } else {
+          console.error(
+            'Brokerages data is missing or not successful:',
+            brokeragesResponse
+          );
+          showNotification('error', 'Error fetching brokerages.');
         }
       } catch (error) {
         console.error('Error loading data:', error);
+        showNotification('error', 'Error loading data.');
       }
     };
 
     loadData();
   }, []);
 
-  const showNotification = (type: 'success' | 'error', message: string) => {
-    setNotification({ type, message });
-    setTimeout(() => setNotification(null), 2000);
+  // Show notification
+  const showNotification = useCallback(
+    (type: 'success' | 'error', message: string) => {
+      setNotification({ type, message });
+      setTimeout(() => setNotification(null), 3000);
+    },
+    []
+  );
+
+  // Handle filter changes - memoize to prevent re-renders
+  const handleFilterChange = useCallback(
+    (newFilters: {
+      sectorIds?: number[];
+      brokerageIds?: number[];
+      code?: string;
+    }) => {
+      setFilters(newFilters);
+    },
+    []
+  );
+
+  // Handle sorting
+  const handleSort = (key: keyof Stock) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (
+      sortConfig &&
+      sortConfig.key === key &&
+      sortConfig.direction === 'asc'
+    ) {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
   };
 
+  // Handle input change for editing sector reference
+  const handleDropdownChange = (id: number, value: string) => {
+    setEditedStocks((prev) => ({
+      ...prev,
+      [id]: value,
+    }));
+  };
+
+  // Save all edited stocks
   const saveAllStocks = async () => {
     const stocksToUpdate = Object.entries(editedStocks).map(
-      ([id, referenceId]) => {
+      ([id, referenceCode]) => {
         const stockId = parseInt(id, 10);
         const stockMaster = stockMasters.find(
-          (ref) => ref.code === referenceId
+          (ref) => ref.code === referenceCode
         );
 
         if (!stockMaster) {
           showNotification(
             'error',
-            `Invalid stock reference for stock ID ${id}.`
+            `Invalid stock master code for stock ID ${id}.`
           );
           return null;
         }
@@ -143,7 +268,10 @@ const StockMapper: React.FC = () => {
           )
         );
         setEditedStocks({});
-        showNotification('success', 'Stocks updated successfully!');
+        showNotification(
+          'success',
+          `${validStocksToUpdate.length} stock(s) updated successfully!`
+        );
         setIsEditMode(false);
       } else {
         showNotification(
@@ -157,22 +285,64 @@ const StockMapper: React.FC = () => {
     }
   };
 
-  const handleDropdownChange = (id: number, value: string) => {
-    setEditedStocks((prev) => ({
-      ...prev,
-      [id]: value,
-    }));
-  };
-
+  // Cancel edit mode
   const cancelEditMode = () => {
     setEditedStocks({});
     setIsEditMode(false);
   };
 
+  // Apply filters
+  const filteredStocks = useMemo(() => {
+    let filtered = [...stocks];
+
+    if (filters.code) {
+      filtered = filtered.filter((stock) =>
+        stock.referenceId.toLowerCase().includes(filters.code!.toLowerCase())
+      );
+    }
+
+    if (filters.sectorIds && filters.sectorIds.length > 0) {
+      const selectedSectorNames = sectors
+        .filter((sector) => filters.sectorIds!.includes(sector.id))
+        .map((sector) => sector.name.toLowerCase());
+      filtered = filtered.filter((stock) =>
+        selectedSectorNames.includes(stock.sector.toLowerCase())
+      );
+    }
+
+    if (filters.brokerageIds && filters.brokerageIds.length > 0) {
+      const selectedBrokerageNames = brokerages
+        .filter((brokerage) => filters.brokerageIds!.includes(brokerage.id))
+        .map((brokerage) => brokerage.name.toLowerCase());
+      filtered = filtered.filter((stock) =>
+        selectedBrokerageNames.includes(stock.brokerage.toLowerCase())
+      );
+    }
+
+    // Apply sorting
+    if (sortConfig !== null) {
+      filtered.sort((a, b) => {
+        const aKey = a[sortConfig.key];
+        const bKey = b[sortConfig.key];
+
+        if (aKey < bKey) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (aKey > bKey) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+
+    return filtered;
+  }, [stocks, filters, sortConfig, sectors, brokerages]);
+
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md relative">
+    <div className="bg-white p-6 rounded-lg shadow-md relative z-10">
       <h2 className="text-xl font-semibold mb-4">Stock Mapper</h2>
 
+      {/* Notification */}
       {notification && (
         <div
           className={`fixed bottom-4 right-4 px-4 py-2 rounded shadow-md text-white text-sm ${
@@ -183,71 +353,212 @@ const StockMapper: React.FC = () => {
         </div>
       )}
 
-      <table className="min-w-full bg-white border border-gray-200 rounded-lg">
-        <thead>
-          <tr>
-            <th className="py-2 px-4 border-b">Brokerage Stock Code</th>
-            <th className="py-2 px-4 border-b">Stock Master Code</th>
-            <th className="py-2 px-4 border-b">Brokerage</th>
-          </tr>
-        </thead>
-        <tbody>
-          {stocks.map((stock) => (
-            <tr key={stock.id}>
-              <td className="py-2 px-4 border-b">{stock.brokerageStockCode}</td>
-              <td className="py-2 px-4 border-b">
-                {isEditMode ? (
-                  <select
-                    value={editedStocks[stock.id] || stock.referenceId}
-                    onChange={(e) =>
-                      handleDropdownChange(stock.id, e.target.value)
-                    }
-                    className="w-full px-2 py-1 border rounded"
-                  >
-                    <option value="">Select Reference</option>
-                    {stockMasters.map((ref) => (
-                      <option key={ref.id} value={ref.code}>
-                        {ref.name}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <span>{stock.referenceId}</span>
-                )}
-              </td>
-              <td className="py-2 px-4 border-b">
-                <span className="text-gray-700">{stock.brokerage}</span>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      <div className="text-right mt-4">
-        {isEditMode ? (
-          <>
+      {/* Controls: Edit Button and Total Entries */}
+      <div className="flex justify-between items-center mb-4">
+        <p className="font-semibold">Total Entries: {filteredStocks.length}</p>
+        <div className="flex space-x-2">
+          {isEditMode ? (
+            <>
+              <button
+                onClick={saveAllStocks}
+                className="flex items-center bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 focus:outline-none"
+                aria-label="Save All Changes"
+              >
+                <FaSave className="mr-2" />
+                Save All Changes
+              </button>
+              <button
+                onClick={cancelEditMode}
+                className="flex items-center bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600 focus:outline-none"
+                aria-label="Cancel Edit Mode"
+              >
+                <FaTrash className="mr-2" />
+                Cancel
+              </button>
+            </>
+          ) : (
             <button
-              onClick={saveAllStocks}
-              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 focus:outline-none mr-2"
+              onClick={() => setIsEditMode(true)}
+              className="flex items-center bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 focus:outline-none"
+              aria-label="Enter Edit Mode"
             >
-              Save All Changes
+              <FaEdit className="mr-2" />
+              Edit
             </button>
-            <button
-              onClick={cancelEditMode}
-              className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 focus:outline-none"
-            >
-              Cancel
-            </button>
-          </>
-        ) : (
-          <button
-            onClick={() => setIsEditMode(true)}
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 focus:outline-none"
-          >
-            Edit
-          </button>
-        )}
+          )}
+          {/* Filter Component */}
+          <Filter
+            availableFilters={availableFilters}
+            sectors={sectors}
+            brokerages={brokerages}
+            onFilterChange={handleFilterChange}
+          />
+        </div>
       </div>
+
+      {/* Stock Mapper Table */}
+      <div className="relative">
+        {/* Wrapping table in a div to manage overflow */}
+        <table className="min-w-full bg-white border border-gray-200 rounded-lg mt-4">
+          <thead>
+            <tr>
+              {/* Conditional Checkbox Header for Selection in Edit Mode */}
+              {isEditMode && (
+                <th className="py-2 px-4 border-b flex items-center">
+                  {/* You can add a "Select All" checkbox here if needed */}
+                </th>
+              )}
+              <th
+                className="py-2 px-4 border-b cursor-pointer"
+                onClick={() => handleSort('brokerageStockCode')}
+                aria-label="Sort Brokerage Stock Code"
+              >
+                <div className="flex items-center justify-center">
+                  Brokerage Stock Code
+                  {sortConfig?.key === 'brokerageStockCode' ? (
+                    sortConfig.direction === 'asc' ? (
+                      <FaArrowUpAZ className="ml-1" />
+                    ) : (
+                      <FaArrowDownZA className="ml-1" />
+                    )
+                  ) : (
+                    <FaArrowUpAZ className="ml-1 opacity-50" />
+                  )}
+                </div>
+              </th>
+              <th
+                className="py-2 px-4 border-b cursor-pointer"
+                onClick={() => handleSort('referenceId')}
+                aria-label="Sort Stock Master Code"
+              >
+                <div className="flex items-center justify-center">
+                  Stock Master Code
+                  {sortConfig?.key === 'referenceId' ? (
+                    sortConfig.direction === 'asc' ? (
+                      <FaArrowUpAZ className="ml-1" />
+                    ) : (
+                      <FaArrowDownZA className="ml-1" />
+                    )
+                  ) : (
+                    <FaArrowUpAZ className="ml-1 opacity-50" />
+                  )}
+                </div>
+              </th>
+              <th
+                className="py-2 px-4 border-b cursor-pointer"
+                onClick={() => handleSort('brokerage')}
+                aria-label="Sort Brokerage"
+              >
+                <div className="flex items-center justify-center">
+                  Brokerage
+                  {sortConfig?.key === 'brokerage' ? (
+                    sortConfig.direction === 'asc' ? (
+                      <FaArrowUpAZ className="ml-1" />
+                    ) : (
+                      <FaArrowDownZA className="ml-1" />
+                    )
+                  ) : (
+                    <FaArrowUpAZ className="ml-1 opacity-50" />
+                  )}
+                </div>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredStocks.map((stock) => (
+              <tr
+                key={stock.id}
+                className="hover:bg-gray-100 transition-colors"
+              >
+                {/* Optional: Checkbox for selecting rows in edit mode */}
+                {isEditMode && (
+                  <td className="py-2 px-4 border-b text-center">
+                    <input
+                      type="checkbox"
+                      checked={editedStocks.hasOwnProperty(stock.id)}
+                      onChange={() => {
+                        if (editedStocks.hasOwnProperty(stock.id)) {
+                          // Deselect
+                          const updated = { ...editedStocks };
+                          delete updated[stock.id];
+                          setEditedStocks(updated);
+                        } else {
+                          // Select and initialize with current referenceId
+                          setEditedStocks((prev) => ({
+                            ...prev,
+                            [stock.id]: stock.referenceId,
+                          }));
+                        }
+                      }}
+                      className="form-checkbox h-4 w-4 text-blue-600"
+                      aria-label={`Select stock ${stock.brokerageStockCode}`}
+                    />
+                  </td>
+                )}
+                <td className="py-2 px-4 border-b text-center">
+                  {stock.brokerageStockCode}
+                </td>
+                <td className="py-2 px-4 border-b text-center">
+                  {isEditMode ? (
+                    <select
+                      value={editedStocks[stock.id] || stock.referenceId}
+                      onChange={(e) =>
+                        handleDropdownChange(stock.id, e.target.value)
+                      }
+                      className="w-full px-2 py-1 border rounded"
+                      aria-label={`Edit Stock Master Code for ${stock.brokerageStockCode}`}
+                    >
+                      <option value="">Select Reference</option>
+                      {stockMasters.map((ref) => (
+                        <option key={ref.id} value={ref.code}>
+                          {ref.name}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span>{stock.referenceId}</span>
+                  )}
+                </td>
+                <td className="py-2 px-4 border-b text-center">
+                  {stock.brokerage}
+                </td>
+              </tr>
+            ))}
+            {filteredStocks.length === 0 && (
+              <tr>
+                <td
+                  colSpan={isEditMode ? 4 : 3}
+                  className="text-center py-4 text-gray-500"
+                >
+                  No stocks found.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Save and Cancel Buttons when in Edit Mode */}
+      {isEditMode && (
+        <div className="flex justify-end mt-4 space-x-2">
+          <button
+            onClick={saveAllStocks}
+            className="flex items-center bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 focus:outline-none"
+            aria-label="Save All Changes"
+          >
+            <FaSave className="mr-2" />
+            Save All Changes
+          </button>
+          <button
+            onClick={cancelEditMode}
+            className="flex items-center bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 focus:outline-none"
+            aria-label="Cancel Edit Mode"
+          >
+            <FaTrash className="mr-2" />
+            Cancel
+          </button>
+        </div>
+      )}
     </div>
   );
 };

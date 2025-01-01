@@ -43,7 +43,7 @@ const Header = () => {
   return (
     <header className="bg-blue-600 text-white py-4 z-50">
       <div className="container mx-auto px-6">
-        <h1 className="text-3xl font-bold">Portfolio Management App</h1>
+        <h1 className="text-3xl font-bold">Portfolio Manager</h1>
       </div>
       <div className="container mx-auto flex justify-around items-end">
         {/* Centered navigation */}
@@ -75,11 +75,18 @@ const Header = () => {
             className="focus:outline-none"
           >
             {/* Display user profile picture */}
-            <img
-              src={currentUser?.photoURL || '/default-profile.png'} // Fallback image if photoURL is not available
-              alt="Profile"
-              className="w-10 h-10 rounded-full"
-            />
+            {currentUser?.photoURL ? (
+              <img
+                src={currentUser?.photoURL || '/default-profile.png'} // Fallback image if photoURL is not available
+                alt="Profile"
+                className="w-10 h-10 rounded-full"
+              />
+            ) : (
+              // Fallback icon if photoURL is not available
+              <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center">
+                <FaUser className="h-5 w-5 text-gray-500" />
+              </div>
+            )}
           </button>
 
           {/* Dropdown menu */}

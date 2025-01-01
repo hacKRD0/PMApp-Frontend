@@ -3,6 +3,17 @@ import ReactDatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { fetchPortfolio, getPortfolioDates } from '../services/apiService';
 import { format } from 'date-fns';
+import NestedTable from './NestedTable'; // Import the NestedTable component
+
+type StockDetails = {
+  name: string;
+  brokerageCode: string;
+  brokerage: string;
+  qty: number;
+  totalCost: number;
+  avgCost: number;
+  totalValue: number;
+};
 
 const Portfolio: React.FC = () => {
   const [portfolio, setPortfolio] = useState<any[]>([]);
@@ -61,27 +72,17 @@ const Portfolio: React.FC = () => {
     return uploadedDates.includes(utcDateString);
   };
 
+  // Updated aggregatePortfolio function to structure data appropriately
   const aggregatePortfolio = () => {
     const aggregation: {
       [key: string]: {
         totalInvested: number;
-        stocks: {
-          [key: number]: {
-            name: string;
-            brokerageCode: string;
-            brokerage: string;
-            qty: number;
-            totalCost: number;
-            avgCost: number;
-            totalValue: number;
-          };
-        };
+        stocks: StockDetails[];
       };
     } = {};
 
     const currentPrices: { [key: string]: number } = {
-      RELIANCE: 3500,
-      HDFCBANK: 1700,
+      // Add more stock codes and their current prices as needed
     };
 
     portfolio.forEach((stock) => {
@@ -95,7 +96,7 @@ const Portfolio: React.FC = () => {
           : stockMaster?.name || 'Unknown';
 
       const stockId =
-        viewMode == 'Stock'
+        viewMode === 'Stock'
           ? `${stockMaster?.id || stockMapper?.id}_${
               stockMapper?.Brokerage?.id
             }`
@@ -111,17 +112,27 @@ const Portfolio: React.FC = () => {
       const stockValue = stock.Qty * marketPrice;
 
       if (!aggregation[groupKey]) {
-        aggregation[groupKey] = { totalInvested: 0, stocks: {} };
+        aggregation[groupKey] = { totalInvested: 0, stocks: [] };
       }
 
       aggregation[groupKey].totalInvested += totalCostForStock;
 
-      if (aggregation[groupKey].stocks[stockId]) {
-        aggregation[groupKey].stocks[stockId].qty += stock.Qty;
-        aggregation[groupKey].stocks[stockId].totalCost += totalCostForStock;
-        aggregation[groupKey].stocks[stockId].totalValue += stockValue;
+      const existingStockIndex = aggregation[groupKey].stocks.findIndex(
+        (s) => s[Object.keys(s)[0]].brokerageCode === brokerageCode
+      );
+
+      if (existingStockIndex !== -1) {
+        // Update existing stock entry
+        const existingStock = aggregation[groupKey].stocks[existingStockIndex];
+        aggregation[groupKey].stocks[existingStockIndex] = {
+          ...existingStock,
+          qty: existingStock.qty + stock.Qty,
+          totalCost: existingStock.totalCost + totalCostForStock,
+          totalValue: existingStock.totalValue + stockValue,
+        };
       } else {
-        aggregation[groupKey].stocks[stockId] = {
+        // Add new stock entry
+        aggregation[groupKey].stocks.push({
           name: stockName,
           brokerageCode: brokerageCode,
           brokerage: stockMapper?.Brokerage?.name || 'Unknown Brokerage',
@@ -129,12 +140,13 @@ const Portfolio: React.FC = () => {
           totalCost: totalCostForStock,
           avgCost: 0,
           totalValue: stockValue,
-        };
+        });
       }
     });
 
+    // Calculate average cost for each stock
     Object.values(aggregation).forEach((groupData) => {
-      Object.values(groupData.stocks).forEach((stock) => {
+      groupData.stocks.forEach((stock) => {
         stock.avgCost = stock.totalCost / stock.qty;
       });
     });
@@ -233,56 +245,11 @@ const Portfolio: React.FC = () => {
                 {expandedGroups[groupKey] && (
                   <tr>
                     <td colSpan={2}>
-                      <table className="min-w-full bg-white mt-2">
-                        <thead>
-                          <tr>
-                            {viewMode === 'Stock' ? (
-                              <>
-                                <th className="py-2 px-4 border">
-                                  Brokerage Code
-                                </th>
-                                <th className="py-2 px-4 border">Brokerage</th>
-                              </>
-                            ) : (
-                              <th className="py-2 px-4 border">Stock</th>
-                            )}
-                            <th className="py-2 px-4 border">Quantity</th>
-                            <th className="py-2 px-4 border">Avg Cost</th>
-                            <th className="py-2 px-4 border">Total Value</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {Object.values(aggregatedData[groupKey].stocks).map(
-                            (stock, index) => (
-                              <tr key={index} className="bg-gray-100">
-                                {viewMode === 'Stock' ? (
-                                  <>
-                                    <td className="py-2 px-4 border">
-                                      {stock.brokerageCode}
-                                    </td>
-                                    <td className="py-2 px-4 border">
-                                      {stock.brokerage}
-                                    </td>
-                                  </>
-                                ) : (
-                                  <td className="py-2 px-4 border">
-                                    {stock.name}
-                                  </td>
-                                )}
-                                <td className="py-2 px-4 border">
-                                  {stock.qty}
-                                </td>
-                                <td className="py-2 px-4 border">
-                                  ₹{stock.avgCost.toFixed(2)}
-                                </td>
-                                <td className="py-2 px-4 border">
-                                  ₹{stock.totalCost.toFixed(2)}
-                                </td>
-                              </tr>
-                            )
-                          )}
-                        </tbody>
-                      </table>
+                      {/* Use the NestedTable component here */}
+                      <NestedTable
+                        viewMode={viewMode}
+                        stocks={aggregatedData[groupKey].stocks}
+                      />
                     </td>
                   </tr>
                 )}

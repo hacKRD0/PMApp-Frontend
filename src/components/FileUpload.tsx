@@ -64,12 +64,41 @@ const FileUpload: React.FC = () => {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files ? e.target.files[0] : null;
-    if (file && file.type === 'text/csv') {
-      setSelectedFile(file);
-      setErrorMessage(null);
+    console.log('Selected file:', file);
+
+    if (file) {
+      // Define allowed MIME types
+      const allowedMimeTypes = [
+        'text/csv',
+        'application/vnd.ms-excel', // .xls
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+      ];
+
+      // Extract file extension
+      const fileExtension = file.name.split('.').pop()?.toLowerCase();
+
+      // Define allowed file extensions
+      const allowedExtensions = ['csv', 'xls', 'xlsx'];
+
+      // Check if the file MIME type is allowed
+      const isValidMimeType = allowedMimeTypes.includes(file.type);
+
+      // Check if the file extension is allowed
+      const isValidExtension = fileExtension
+        ? allowedExtensions.includes(fileExtension)
+        : false;
+
+      // Validate the file by MIME type or extension
+      if (isValidMimeType || isValidExtension) {
+        setSelectedFile(file);
+        setErrorMessage(null);
+      } else {
+        setSelectedFile(null);
+        setErrorMessage('Please upload a .csv, .xls, or .xlsx file.');
+      }
     } else {
       setSelectedFile(null);
-      setErrorMessage('Please upload a valid .csv file.');
+      setErrorMessage('Please upload a .csv, .xls, or .xlsx file.');
     }
     if (e.target) {
       e.target.value = ''; // Reset file input to allow re-selection of the same file
@@ -175,7 +204,7 @@ const FileUpload: React.FC = () => {
           </button>
           <input
             type="file"
-            accept=".csv"
+            accept=".csv, .xls, .xlsx, text/csv, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             id="fileInput"
             className="hidden"
             onChange={handleFileChange}

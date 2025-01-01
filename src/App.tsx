@@ -13,6 +13,7 @@ import SectorMasterPage from './pages/SectorMasterPage.tsx';
 import StockMasterPage from './pages/StockMasterPage.tsx';
 import NotFound from './pages/404.tsx';
 import HomePage from './pages/HomePage.tsx';
+import ProfilePage from './pages/ProfilePage.tsx';
 
 function App() {
   return (
@@ -79,6 +80,15 @@ function App() {
             }
           />{' '}
           {/* Add StockMasterPage route */}
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                {' '}
+                <ProfilePage />
+              </ProtectedRoute>
+            }
+          />{' '}
         </Routes>
       </Router>
     </AuthProvider>

@@ -61,15 +61,22 @@ export const updateStockMapper = async (stocks: { stockId: number; stockMasterId
 
 
 // Update stockMaster
-export const updateStockMaster = async (referenceData: { stockMasterId: number, sectorId?: number; }) => {
-  const requestBody = JSON.stringify(referenceData);
-  const response = await api.put(`/portfolio/updateStockMaster/`, requestBody);
+export const updateStockMasters = async (
+  updates: Array<{ stockMasterId: number; sectorId: number }>
+): Promise<{ success: boolean; message?: string }> => {
+  if (!Array.isArray(updates) || updates.length === 0) {
+    throw new Error('The updates array is required and must not be empty.');
+  }
+  const requestBody = JSON.stringify({ updates });
+  const response = await api.put(`/portfolio/updateStockMasters/`, requestBody);
   return response.data;
 };
 
 // Delete stockMaster
-export const deleteStockMaster = async (stockMasterId: number) => {
-  const response = await api.delete(`/portfolio/deleteStockMaster/`, { data: { stockMasterId } });
+export const deleteStockMasters = async (
+  stockMasterIds: number[]
+): Promise<{ success: boolean; message?: string }> => {
+  const response = await api.delete(`/portfolio/deleteStockMasters/`, { data: { stockMasterIds } });
   return response.data;
 };
 
@@ -97,9 +104,9 @@ export const fetchStockMapper = async () => {
 };
 
 // Update sector
-export const updateSector = async (sectorId: number, sectorName: string) => {
-  const requestBody = JSON.stringify({ sectorId: sectorId, sectorName: sectorName });
-  const response = await api.put(`/portfolio/updateSector/`, requestBody);
+export const updateSectors = async (updates: Array<{ sectorId: number, sectorName: string }>) => {
+  const requestBody = JSON.stringify({ updates });
+  const response = await api.put(`/portfolio/updateSectors/`, requestBody);
   return response.data;
 };
 
@@ -111,7 +118,7 @@ export const addSector = async (sectorName: string) => {
 };
 
 // Delete sector
-export const deleteSector = async (sectorIds: [number]) => {
+export const deleteSectors = async (sectorIds: number[]) => {
   if (!Array.isArray(sectorIds)) {
     throw new Error('The sectorIds array is required.');
   }
