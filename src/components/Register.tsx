@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signUp } from '../services/authService';
 import { addUser } from '../services/apiService';
+import { FaRegEye, FaRegEyeSlash } from 'react-icons/fa';
 
 const Register = () => {
   const [email, setEmail] = useState('');
@@ -89,30 +90,7 @@ const Register = () => {
             onClick={() => setShowPassword(!showPassword)}
             className="absolute inset-y-0 right-0 flex items-center pr-3"
           >
-            {showPassword ? (
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 text-gray-500"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 2C5.18 2 1 5.82 1 10c0 4.18 4.18 8 9 8s9-3.82 9-8c0-4.18-4.18-8-9-8zM3 10c0-3.47 3.13-6 7-6s7 2.53 7 6c0 3.47-3.13 6-7 6s-7-2.53-7-6zm7 3a3 3 0 100-6 3 3 0 000 6z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            ) : (
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 text-gray-500"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path d="M13.875 11.825a3 3 0 11-4.075-4.075L6.95 5.9a8.033 8.033 0 00-3.7 4.1c1.38 2.22 3.995 3.96 7 3.96 1.185 0 2.31-.24 3.3-.66l-1.675-1.475zm-2.7-.3a2 2 0 101.275-1.275l-1.275 1.275z" />
-                <path d="M17.9 10a8.028 8.028 0 00-1.275-1.95l1.075-1.075a.75.75 0 10-1.075-1.075l-2.25 2.25a5.985 5.985 0 00-3.45-1.15 6 6 0 00-3.9 1.525l-2.25-2.25a.75.75 0 00-1.075 1.075l13.5 13.5a.75.75 0 001.075-1.075l-2.25-2.25A7.936 7.936 0 0017.9 10z" />
-              </svg>
-            )}
+            {showPassword ? <FaRegEye /> : <FaRegEyeSlash />}
           </button>
         </div>
 
@@ -133,36 +111,15 @@ const Register = () => {
             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
             className="absolute inset-y-0 right-0 flex items-center pr-3"
           >
-            {showConfirmPassword ? (
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 text-gray-500"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 2C5.18 2 1 5.82 1 10c0 4.18 4.18 8 9 8s9-3.82 9-8c0-4.18-4.18-8-9-8zM3 10c0-3.47 3.13-6 7-6s7 2.53 7 6c0 3.47-3.13 6-7 6s-7-2.53-7-6zm7 3a3 3 0 100-6 3 3 0 000 6z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            ) : (
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 text-gray-500"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path d="M13.875 11.825a3 3 0 11-4.075-4.075L6.95 5.9a8.033 8.033 0 00-3.7 4.1c1.38 2.22 3.995 3.96 7 3.96 1.185 0 2.31-.24 3.3-.66l-1.675-1.475zm-2.7-.3a2 2 0 101.275-1.275l-1.275 1.275z" />
-                <path d="M17.9 10a8.028 8.028 0 00-1.275-1.95l1.075-1.075a.75.75 0 10-1.075-1.075l-2.25 2.25a5.985 5.985 0 00-3.45-1.15 6 6 0 00-3.9 1.525l-2.25-2.25a.75.75 0 00-1.075 1.075l13.5 13.5a.75.75 0 001.075-1.075l-2.25-2.25A7.936 7.936 0 0017.9 10z" />
-              </svg>
-            )}
+            {showConfirmPassword ? <FaRegEye /> : <FaRegEyeSlash />}
           </button>
         </div>
 
         <button
           type="submit"
-          className={`bg-green-500 text-white p-2 w-full mb-4 ${!isFormValid ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className={`bg-green-500 text-white p-2 w-full mb-4 ${
+            !isFormValid ? 'opacity-50 cursor-not-allowed' : ''
+          }`}
           disabled={!isFormValid} // Disable the button if the form is invalid
         >
           Register

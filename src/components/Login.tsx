@@ -3,11 +3,13 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signIn, signInWithGoogle } from '../services/authService';
 import { addUser } from '../services/apiService';
+import { FaRegEye, FaRegEyeSlash } from 'react-icons/fa';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -59,13 +61,28 @@ const Login = () => {
           onChange={(e) => setEmail(e.target.value)}
           className="border p-2 w-full mb-4"
         />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="border p-2 w-full mb-4"
-        />
+        <div className="relative mb-4">
+          <input
+            type={showPassword ? 'text' : 'password'}
+            id="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            className="border p-2 w-full pr-10"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute inset-y-0 right-0 flex items-center pr-3"
+            aria-label={
+              showPassword ? 'Hide current password' : 'Show current password'
+            }
+          >
+            {showPassword ? <FaRegEye /> : <FaRegEyeSlash />}
+          </button>
+        </div>
+
         <button
           type="submit"
           className="bg-blue-500 text-white p-2 w-full mb-4"

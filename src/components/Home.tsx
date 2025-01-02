@@ -80,6 +80,11 @@ const Home = () => {
               </button>
             </li>
             <li>
+              <strong>Delete Portfolio:</strong> Use the "Delete Portfolio"
+              component in the upload page to delete stocks of a brokerage for a
+              range of dates.
+            </li>
+            <li>
               <strong>View Portfolio:</strong> Use the "Portfolio" page to view
               your consolidated portfolio for any specific date.
             </li>
@@ -91,12 +96,20 @@ const Home = () => {
           <h2 className="text-xl font-semibold mb-4">Additional Features</h2>
           <p className="mb-4">The app provides advanced tools to help you:</p>
           <ul className="list-disc list-inside space-y-2">
-            <li>Track historical portfolio data for specific dates.</li>
-            <li>Upload files with stock information and bulk data updates.</li>
-            <li>Manage your sectors and stock references efficiently.</li>
             <li>
-              Data for latest uploaded file for a brokerage on a day will only
-              be stored.
+              Dates with data will be highlighted in red on the datepickers.
+            </li>
+            <li>
+              Input textboxes on the Sector and Stock Master pages filter
+              entries by search so you know you aren't adding duplicate data.
+            </li>
+            <li>
+              All tables can be sorted and/or filtered, click the icons in the
+              header row to play around.
+            </li>
+            <li>
+              The consolidated portfolio has 3 views, sector, brokerage and
+              stock (this uses the stock master codes to divide stocks).
             </li>
           </ul>
         </section>
