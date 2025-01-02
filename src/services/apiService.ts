@@ -161,4 +161,17 @@ export const getPortfolioDates = async () => {
   return response.data;
 };
 
+// Delete portfolio data
+export const deletePortfolio = async (data: { brokerageId: number, fromDate: string, toDate: string }) => {
+  const requestBody = JSON.stringify(data);
+  const response = await api.delete('/portfolio', { data: requestBody });
+  return response.data;
+};
+
+// Fetch user data
+export const getUserData = async () => {
+  const response = await api.get('/user');
+  return response.data;
+};
+
 export default api;

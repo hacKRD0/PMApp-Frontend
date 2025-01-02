@@ -1,15 +1,17 @@
+// src/components/FileUpload.tsx
+
 import React, { useEffect, useState } from 'react';
 import { FaCloudUploadAlt } from 'react-icons/fa';
-import ReactDatePicker from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css';
+import LocalDatePicker from './LocalDatePicker'; // Our new component
+import { format } from 'date-fns';
+
 import {
   uploadFile,
   getBrokerages,
   getDefaultBrokerage,
   updateDefaultBrokerage,
-  getPortfolioDates,
+  getPortfolioDates, // <-- We'll use this ourselves
 } from '../services/apiService';
-import { format } from 'date-fns';
 
 const FileUpload: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -21,19 +23,20 @@ const FileUpload: React.FC = () => {
     null
   );
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
-  const [uploadedDates, setUploadedDates] = useState<string[]>([]); // Highlighted dates
+  // Moved highlight dates here:
+  const [highlightDates, setHighlightDates] = useState<string[]>([]);
   const [defaultBrokerageModal, setDefaultBrokerageModal] = useState(false);
   const [defaultBrokerageId, setDefaultBrokerageId] = useState<number | null>(
     null
   );
+  const [isUploading, setIsUploading] = useState(false);
 
-  // Fetch brokerages, user's default brokerage, and uploaded dates
   useEffect(() => {
     const initialize = async () => {
       try {
         const brokerageResponse = await getBrokerages();
         const userResponse = await getDefaultBrokerage();
-        const uploadedDatesResponse = await getPortfolioDates();
+        const datesResponse = await getPortfolioDates();
 
         if (brokerageResponse.success && brokerageResponse.Brokerages) {
           setBrokerages(brokerageResponse.Brokerages);
@@ -44,14 +47,15 @@ const FileUpload: React.FC = () => {
         if (userResponse.success) {
           setDefaultBrokerageId(userResponse.defaultBrokerageId);
           if (userResponse.defaultBrokerage === null) {
-            setDefaultBrokerageModal(true); // Show modal if defaultBrokerageId is null
+            setDefaultBrokerageModal(true);
           }
         } else {
           setErrorMessage('Failed to fetch user information');
         }
 
-        if (uploadedDatesResponse.success) {
-          setUploadedDates(uploadedDatesResponse.dates); // Dates are in ISO string format
+        if (datesResponse.success) {
+          // Suppose these are 'YYYY-MM-DD' strings
+          setHighlightDates(datesResponse.dates);
         }
       } catch (error) {
         setErrorMessage('Error initializing data');
@@ -64,7 +68,6 @@ const FileUpload: React.FC = () => {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files ? e.target.files[0] : null;
-    console.log('Selected file:', file);
 
     if (file) {
       // Define allowed MIME types
@@ -76,19 +79,16 @@ const FileUpload: React.FC = () => {
 
       // Extract file extension
       const fileExtension = file.name.split('.').pop()?.toLowerCase();
-
       // Define allowed file extensions
       const allowedExtensions = ['csv', 'xls', 'xlsx'];
 
-      // Check if the file MIME type is allowed
+      // Check if MIME type is allowed
       const isValidMimeType = allowedMimeTypes.includes(file.type);
-
       // Check if the file extension is allowed
       const isValidExtension = fileExtension
         ? allowedExtensions.includes(fileExtension)
         : false;
 
-      // Validate the file by MIME type or extension
       if (isValidMimeType || isValidExtension) {
         setSelectedFile(file);
         setErrorMessage(null);
@@ -100,8 +100,9 @@ const FileUpload: React.FC = () => {
       setSelectedFile(null);
       setErrorMessage('Please upload a .csv, .xls, or .xlsx file.');
     }
+    // Reset file input to allow selecting the same file again
     if (e.target) {
-      e.target.value = ''; // Reset file input to allow re-selection of the same file
+      e.target.value = '';
     }
   };
 
@@ -110,16 +111,8 @@ const FileUpload: React.FC = () => {
     if (fileInput) fileInput.click();
   };
 
-  const normalizeToUTC = (date: Date): Date => {
-    return new Date(
-      Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
-    );
-  };
-
   const handleDateChange = (date: Date | null) => {
-    if (date) {
-      setSelectedDate(normalizeToUTC(date));
-    }
+    setSelectedDate(date);
   };
 
   const handleDefaultBrokerageSubmit = async () => {
@@ -139,18 +132,28 @@ const FileUpload: React.FC = () => {
       }
     }
   };
+  const refreshHighlightDates = async () => {
+    try {
+      const datesResponse = await getPortfolioDates();
+      if (datesResponse.success) {
+        setHighlightDates(datesResponse.dates);
+      }
+    } catch (error) {
+      console.error('Error fetching highlight dates:', error);
+    }
+  };
 
   const handleSubmit = async () => {
-    if (!selectedFile || !selectedBrokerage || !selectedDate) return;
+    if (isUploading || !selectedFile || !selectedBrokerage || !selectedDate)
+      return;
 
+    setIsUploading(true);
     try {
       const formData = new FormData();
       formData.append('file', selectedFile, selectedFile.name);
-      formData.append(
-        'brokerageId',
-        selectedBrokerage ? selectedBrokerage.toString() : ''
-      );
+      formData.append('brokerageId', selectedBrokerage.toString());
 
+      // Convert local date to 'YYYY-MM-DD'
       const formattedDate = format(selectedDate, 'yyyy-MM-dd');
       formData.append('date', formattedDate);
 
@@ -161,38 +164,27 @@ const FileUpload: React.FC = () => {
         setSelectedFile(null);
         setSelectedBrokerage(null);
         setSelectedDate(new Date());
-
-        try {
-          const uploadedDatesResponse = await getPortfolioDates();
-          if (uploadedDatesResponse?.success) {
-            setUploadedDates(uploadedDatesResponse.dates);
-          }
-        } catch (error) {
-          console.error('Error fetching uploaded dates:', error);
-          alert('An error occurred while updating uploaded dates.');
-        }
+        // re-fetch highlight dates
+        await refreshHighlightDates();
       } else {
         alert('File upload failed. Please try again.');
       }
     } catch (error) {
       console.error('Error uploading file:', error);
       alert('An error occurred during file upload. Please try again.');
+    } finally {
+      setIsUploading(false);
     }
-  };
-
-  const isUploadedDate = (date: Date): boolean => {
-    const utcDateString = normalizeToUTC(date).toISOString().split('T')[0];
-    const formattedDate = format(date, 'yyyy-MM-dd');
-    return uploadedDates.includes(formattedDate);
   };
 
   return (
     <div className="h-fit flex items-center justify-center bg-gray-100">
       <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <h2 className="text-xl font-semibold mb-6 text-gray-800">
+        <h2 className="text-2xl font-semibold text-gray-700 mb-6 text-center">
           Upload Your Holdings CSV
         </h2>
 
+        {/* File upload button & input */}
         <div className="mb-4 flex flex-col items-center justify-center">
           <button
             type="button"
@@ -204,7 +196,7 @@ const FileUpload: React.FC = () => {
           </button>
           <input
             type="file"
-            accept=".csv, .xls, .xlsx, text/csv, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            accept=".csv, .xls, .xlsx"
             id="fileInput"
             className="hidden"
             onChange={handleFileChange}
@@ -214,14 +206,15 @@ const FileUpload: React.FC = () => {
           )}
         </div>
 
+        {/* Brokerage select */}
         <div className="mb-4">
           <select
-            className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:border-indigo-500"
+            className="w-full p-2 border border-gray-300 rounded focus:outline-none"
             value={selectedBrokerage || ''}
             onChange={(e) => setSelectedBrokerage(Number(e.target.value))}
           >
             <option value="" disabled>
-              Select brokerage
+              -- Select brokerage --
             </option>
             {brokerages.map((brokerage) => (
               <option key={brokerage.id} value={brokerage.id}>
@@ -231,43 +224,41 @@ const FileUpload: React.FC = () => {
           </select>
         </div>
 
+        {/* LocalDatePicker with highlightDates */}
         <div className="mb-4">
-          <label
-            htmlFor="date-picker"
-            className="mr-2 font-semibold text-gray-700"
-          >
+          <label className="mr-2 font-semibold text-gray-700">
             Select Date:
           </label>
-          <ReactDatePicker
-            selected={selectedDate}
-            onChange={handleDateChange}
+          <LocalDatePicker
+            selectedDate={selectedDate}
+            onDateChange={handleDateChange}
             maxDate={new Date()}
-            dayClassName={(date) =>
-              isUploadedDate(date)
-                ? 'react-datepicker__day--highlighted bg-red-300 text-white'
-                : ''
-            }
+            highlightDates={highlightDates} // pass the array of YYYY-MM-DD
             className="p-2 border border-gray-300 rounded"
           />
         </div>
 
+        {/* Selected file display */}
         {selectedFile && (
           <p className="text-gray-700 mt-4">
             Selected file: {selectedFile.name}
           </p>
         )}
 
+        {/* Submit */}
         <button
           type="button"
           onClick={handleSubmit}
-          disabled={!selectedFile || !selectedBrokerage || !selectedDate}
+          disabled={
+            isUploading || !selectedFile || !selectedBrokerage || !selectedDate
+          }
           className={`w-full p-4 rounded-lg text-white ${
-            !selectedFile || !selectedBrokerage || !selectedDate
+            isUploading || !selectedFile || !selectedBrokerage || !selectedDate
               ? 'bg-gray-400 cursor-not-allowed'
               : 'bg-indigo-500 hover:bg-indigo-600'
           }`}
         >
-          Submit
+          {isUploading ? 'Uploading...' : 'Submit'}
         </button>
       </div>
 

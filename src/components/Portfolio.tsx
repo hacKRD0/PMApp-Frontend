@@ -4,6 +4,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 import { fetchPortfolio, getPortfolioDates } from '../services/apiService';
 import { format } from 'date-fns';
 import NestedTable from './NestedTable'; // Import the NestedTable component
+import LocalDatePicker from './LocalDatePicker';
 
 type StockDetails = {
   name: string;
@@ -24,7 +25,7 @@ const Portfolio: React.FC = () => {
     'Sector'
   );
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
-  const [uploadedDates, setUploadedDates] = useState<string[]>([]); // Dates to highlight
+  const [highlightDates, setHighlightDates] = useState<string[]>([]); // Dates to highlight
 
   // Fetch portfolio data for the selected date
   const fetchData = async () => {
@@ -41,36 +42,24 @@ const Portfolio: React.FC = () => {
     }
   };
 
-  // Fetch uploaded dates for highlighting
-  const fetchUploadedDates = async () => {
-    try {
-      const response = await getPortfolioDates();
-      if (response.success) {
-        setUploadedDates(response.dates); // Dates in YYYY-MM-DD format
-      }
-    } catch (error) {
-      console.error('Error fetching uploaded dates:', error);
-    }
-  };
-
   useEffect(() => {
+    // Fetch uploaded dates for highlighting
+    const fetchUploadedDates = async () => {
+      try {
+        const response = await getPortfolioDates();
+        if (response.success) {
+          setHighlightDates(response.dates); // Dates in YYYY-MM-DD format
+        }
+      } catch (error) {
+        console.error('Error fetching uploaded dates:', error);
+      }
+    };
     fetchUploadedDates();
   }, []);
 
   useEffect(() => {
     fetchData();
   }, [selectedDate]);
-
-  const normalizeToUTC = (date: Date): Date => {
-    return new Date(
-      Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
-    );
-  };
-
-  const isUploadedDate = (date: Date): boolean => {
-    const utcDateString = normalizeToUTC(date).toISOString().split('T')[0];
-    return uploadedDates.includes(utcDateString);
-  };
 
   // Updated aggregatePortfolio function to structure data appropriately
   const aggregatePortfolio = () => {
@@ -184,17 +173,11 @@ const Portfolio: React.FC = () => {
         >
           Select Date:
         </label>
-        <ReactDatePicker
-          selected={selectedDate}
-          onChange={(date) =>
-            setSelectedDate(date ? normalizeToUTC(date) : null)
-          }
+        <LocalDatePicker
+          selectedDate={selectedDate}
+          onDateChange={setSelectedDate}
           maxDate={new Date()}
-          dayClassName={(date) =>
-            isUploadedDate(date)
-              ? 'react-datepicker__day--highlighted bg-red-300 text-white'
-              : ''
-          }
+          highlightDates={highlightDates}
           className="p-2 border border-gray-300 rounded"
         />
       </div>
