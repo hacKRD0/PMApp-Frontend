@@ -90,8 +90,8 @@ export const uploadFile = async (formData: FormData) => {
   return response.data;
 };
 
-// Add stock reference
-export const addStockMaster = async (stockData: { code: string, name: string, SectorId: number }) => {
+// Add stock master
+export const addStockMaster = async (stockData: { code: string, SectorId: number }) => {
   const requestBody = JSON.stringify(stockData);
   const response = await api.post('/portfolio/stockMaster', requestBody);
   return response.data;

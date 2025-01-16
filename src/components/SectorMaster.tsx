@@ -100,7 +100,7 @@ const SectorMaster: React.FC = () => {
           const updatedSectors = [...sectors, response.sector];
           const sortedSectors = sortAndAssignSno(updatedSectors, sorting);
           setSectors(sortedSectors);
-          setNewSectorName('');
+          // setNewSectorName('');
           showNotification('Sector added successfully.', 'success');
         } else {
           showNotification('Failed to add sector.', 'error');
@@ -233,7 +233,7 @@ const SectorMaster: React.FC = () => {
       {/* Notification */}
       {notification.type && (
         <div
-          className={`fixed bottom-4 right-4 px-4 py-2 rounded shadow-md ${
+          className={`fixed bottom-4 right-4 z-40 px-4 py-2 rounded shadow-md ${
             notification.type === 'success'
               ? 'bg-green-200 text-green-800'
               : 'bg-red-200 text-red-800'

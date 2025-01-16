@@ -3,13 +3,15 @@ import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   fetchStockMapper,
   fetchStockMasters,
-  fetchSectors, // Ensure this API exists
-  getBrokerages, // Ensure this API exists
+  fetchSectors,
+  getBrokerages,
   updateStockMapper,
+  addStockMaster, // Ensure this API exists
 } from '../services/apiService';
 import Filter from './Filter'; // Adjust the import path as necessary
 import { FaArrowUpAZ, FaArrowDownZA } from 'react-icons/fa6';
-import { FaEdit, FaSave, FaTrash } from 'react-icons/fa';
+import { FaEdit, FaSave, FaTrash, FaPlus } from 'react-icons/fa';
+import SearchableDropdown from './SearchableDropDown'; // Ensure correct casing
 
 // Define your types
 type Stock = {
@@ -22,7 +24,7 @@ type Stock = {
 
 type StockMaster = {
   id: number;
-  name: string;
+  // name: string;
   code: string;
 };
 
@@ -49,6 +51,16 @@ const StockMapper: React.FC = () => {
     message: string;
   } | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
+
+  // State to track which rows are in "add mode"
+  const [addingStockMaster, setAddingStockMaster] = useState<{
+    [key: number]: boolean;
+  }>({});
+
+  // State to track input values for adding new StockMasters
+  const [newStockMasterInput, setNewStockMasterInput] = useState<{
+    [key: number]: string;
+  }>({});
 
   // Filter states
   const [filters, setFilters] = useState<{
@@ -96,6 +108,9 @@ const StockMapper: React.FC = () => {
               sector: item.StockMaster?.Sector?.name || 'Unknown Sector', // Ensure Sector is derived via StockMaster
             })
           );
+          formattedStocks.sort((a, b) =>
+            a.referenceId.localeCompare(b.referenceId)
+          );
           setStocks(formattedStocks);
         } else {
           console.error(
@@ -113,6 +128,7 @@ const StockMapper: React.FC = () => {
               name: ref.name,
               code: ref.code,
             }));
+          formattedStockMasters.sort((a, b) => a.code.localeCompare(b.code));
           setStockMasters(formattedStockMasters);
         } else {
           console.error(
@@ -217,7 +233,7 @@ const StockMapper: React.FC = () => {
         if (!stockMaster) {
           showNotification(
             'error',
-            `Invalid stock master code for stock ID ${id}.`
+            `Invalid Stock Master code for stock ID ${id}.`
           );
           return null;
         }
@@ -289,6 +305,8 @@ const StockMapper: React.FC = () => {
   const cancelEditMode = () => {
     setEditedStocks({});
     setIsEditMode(false);
+    setAddingStockMaster({});
+    setNewStockMasterInput({});
   };
 
   // Apply filters
@@ -325,18 +343,95 @@ const StockMapper: React.FC = () => {
         const aKey = a[sortConfig.key];
         const bKey = b[sortConfig.key];
 
-        if (aKey < bKey) {
-          return sortConfig.direction === 'asc' ? -1 : 1;
-        }
-        if (aKey > bKey) {
-          return sortConfig.direction === 'asc' ? 1 : -1;
-        }
+        if (aKey < bKey) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aKey > bKey) return sortConfig.direction === 'asc' ? 1 : -1;
         return 0;
       });
     }
 
     return filtered;
   }, [stocks, filters, sortConfig, sectors, brokerages]);
+
+  // Handlers for "Add StockMaster" functionality
+  const handleAddStockMasterClick = (id: number) => {
+    setAddingStockMaster((prev) => ({ ...prev, [id]: true }));
+    setNewStockMasterInput((prev) => ({ ...prev, [id]: '' }));
+  };
+
+  const handleAddStockMasterInputChange = (id: number, value: string) => {
+    setNewStockMasterInput((prev) => ({ ...prev, [id]: value }));
+  };
+
+  const handleConfirmAddStockMaster = async (id: number) => {
+    const inputValue = newStockMasterInput[id].trim();
+    if (inputValue === '') {
+      // Only whitespace, exit add mode
+      setAddingStockMaster((prev) => {
+        const updated = { ...prev };
+        delete updated[id];
+        return updated;
+      });
+      setNewStockMasterInput((prev) => {
+        const updated = { ...prev };
+        delete updated[id];
+        return updated;
+      });
+      return;
+    }
+
+    // Find the stock's sectorId
+    const stock = stocks.find((s) => s.id === id);
+    const sector = sectors.find((s) => s.name === stock?.sector);
+    const sectorId = sector ? sector.id : 0; // Handle 0 or default sectorId appropriately
+
+    try {
+      const response = await addStockMaster({
+        code: inputValue,
+        SectorId: sectorId,
+      });
+
+      if (response.success && response.stockMaster) {
+        // Add to stockMasters
+        setStockMasters((prev) => [...prev, response.stockMaster]);
+        // Update editedStocks to select the new stockMaster
+        setEditedStocks((prev) => ({
+          ...prev,
+          [id]: response.stockMaster.code,
+        }));
+        // Exit add mode
+        setAddingStockMaster((prev) => {
+          const updated = { ...prev };
+          delete updated[id];
+          return updated;
+        });
+        setNewStockMasterInput((prev) => {
+          const updated = { ...prev };
+          delete updated[id];
+          return updated;
+        });
+        // Show notification
+        showNotification('success', 'Stock Master added successfully.');
+      } else {
+        showNotification('error', 'Failed to add Stock Master.');
+      }
+    } catch (error) {
+      console.error('Error adding Stock Master:', error);
+      showNotification('error', 'An error occurred while adding Stock Master.');
+    }
+  };
+
+  const handleCancelAddStockMaster = (id: number) => {
+    setAddingStockMaster((prev) => {
+      const updated = { ...prev };
+      delete updated[id];
+      return updated;
+    });
+    setNewStockMasterInput((prev) => {
+      const updated = { ...prev };
+      delete updated[id];
+      return updated;
+    });
+  };
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-md relative z-10">
@@ -345,7 +440,7 @@ const StockMapper: React.FC = () => {
       {/* Notification */}
       {notification && (
         <div
-          className={`fixed bottom-4 right-4 px-4 py-2 rounded shadow-md text-white text-sm ${
+          className={`fixed bottom-4 right-4 z-40 px-4 py-2 rounded shadow-md text-white text-sm ${
             notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
           }`}
         >
@@ -397,14 +492,14 @@ const StockMapper: React.FC = () => {
       </div>
 
       {/* Stock Mapper Table */}
-      <div className="relative">
+      <div className="relative overflow-x-auto">
         {/* Wrapping table in a div to manage overflow */}
         <table className="min-w-full bg-white border border-gray-200 rounded-lg mt-4">
           <thead>
             <tr>
               {/* Conditional Checkbox Header for Selection in Edit Mode */}
               {isEditMode && (
-                <th className="py-2 px-4 border-b flex items-center">
+                <th className="py-2 px-4 border-b">
                   {/* You can add a "Select All" checkbox here if needed */}
                 </th>
               )}
@@ -500,21 +595,61 @@ const StockMapper: React.FC = () => {
                 </td>
                 <td className="py-2 px-4 border-b text-center">
                   {isEditMode ? (
-                    <select
-                      value={editedStocks[stock.id] || stock.referenceId}
-                      onChange={(e) =>
-                        handleDropdownChange(stock.id, e.target.value)
-                      }
-                      className="w-full px-2 py-1 border rounded"
-                      aria-label={`Edit Stock Master Code for ${stock.brokerageStockCode}`}
-                    >
-                      <option value="">Select Reference</option>
-                      {stockMasters.map((ref) => (
-                        <option key={ref.id} value={ref.code}>
-                          {ref.name}
-                        </option>
-                      ))}
-                    </select>
+                    addingStockMaster[stock.id] ? (
+                      // Render input field with tick and 'x' buttons
+                      <div className="flex items-center justify-center space-x-2">
+                        <input
+                          type="text"
+                          value={newStockMasterInput[stock.id] || ''}
+                          onChange={(e) =>
+                            handleAddStockMasterInputChange(
+                              stock.id,
+                              e.target.value
+                            )
+                          }
+                          placeholder="Enter StockMaster Code"
+                          className="px-2 py-1 border rounded w-48"
+                          aria-label={`Enter new Stock Master Code for ${stock.brokerageStockCode}`}
+                        />
+                        <button
+                          onClick={() => handleConfirmAddStockMaster(stock.id)}
+                          className="text-green-500 px-2"
+                          aria-label="Confirm adding Stock Master"
+                        >
+                          ✔
+                        </button>
+                        <button
+                          onClick={() => handleCancelAddStockMaster(stock.id)}
+                          className="text-red-500 px-2"
+                          aria-label="Cancel adding Stock Master"
+                        >
+                          X
+                        </button>
+                      </div>
+                    ) : (
+                      // Render SearchableDropdown with '+' button
+                      <div className="flex items-center justify-center space-x-2">
+                        <SearchableDropdown
+                          options={stockMasters}
+                          value={editedStocks[stock.id] || stock.referenceId}
+                          onChange={(value) =>
+                            handleDropdownChange(stock.id, value)
+                          }
+                          placeholder="Select StockMaster"
+                          labelExtractor={(stockMaster) => stockMaster.code}
+                          valueExtractor={(stockMaster) => stockMaster.code}
+                          ariaLabel={`Edit Stock Master Code for ${stock.brokerageStockCode}`}
+                          className="w-48"
+                        />
+                        <button
+                          onClick={() => handleAddStockMasterClick(stock.id)}
+                          className="text-blue-500 px-2"
+                          aria-label={`Add new Stock Master for ${stock.brokerageStockCode}`}
+                        >
+                          <FaPlus />
+                        </button>
+                      </div>
+                    )
                   ) : (
                     <span>{stock.referenceId}</span>
                   )}

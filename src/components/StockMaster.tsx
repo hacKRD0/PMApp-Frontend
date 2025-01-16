@@ -12,10 +12,11 @@ import { FaPlus, FaArrowUpAZ, FaArrowDownZA } from 'react-icons/fa6';
 import { FaEdit, FaSave, FaTrash } from 'react-icons/fa';
 import Filter from './Filter'; // Adjust the import path as necessary
 import { Sector } from './types'; // Import Sector type
+import SearchableDropdown from './SearchableDropDown';
 
 type StockMaster = {
   id: number;
-  name: string;
+  // name: string;
   code: string;
   SectorId: number;
   Sector: {
@@ -31,7 +32,6 @@ const StockMaster: React.FC = () => {
     [key: number]: Partial<StockMaster>;
   }>({});
   const [newStockMaster, setNewStockMaster] = useState({
-    name: '',
     code: '',
     SectorId: 0,
   });
@@ -155,13 +155,13 @@ const StockMaster: React.FC = () => {
 
   // Add new stock master
   const addNewStockMaster = async () => {
-    const { name, code, SectorId } = newStockMaster;
-    if (name.trim() && code.trim() && SectorId) {
+    const { code, SectorId } = newStockMaster;
+    if (code.trim()) {
       try {
         const response = await addStockMaster(newStockMaster);
         if (response.success && response.stockMaster) {
           setStockMasters((prev) => [...prev, response.stockMaster]);
-          setNewStockMaster({ name: '', code: '', SectorId: 0 });
+          setNewStockMaster({ code: '', SectorId: 0 });
           showNotification(
             'New stock reference added successfully.',
             'success'
@@ -397,7 +397,7 @@ const StockMaster: React.FC = () => {
       {/* Notification */}
       {notification.type && (
         <div
-          className={`fixed bottom-4 right-4 px-4 py-2 rounded shadow-md ${
+          className={`fixed bottom-4 z-40 right-4 px-4 py-2 rounded shadow-md ${
             notification.type === 'success'
               ? 'bg-green-200 text-green-800'
               : 'bg-red-200 text-red-800'
@@ -409,19 +409,7 @@ const StockMaster: React.FC = () => {
 
       {/* Add New Stock Master Form */}
       <div className="mb-6">
-        <div className="grid grid-cols-3 gap-4">
-          <input
-            type="text"
-            value={newStockMaster.name}
-            onChange={(e) =>
-              setNewStockMaster((prev) => ({
-                ...prev,
-                name: e.target.value,
-              }))
-            }
-            placeholder="Stock Name"
-            className="px-2 py-1 border rounded"
-          />
+        <div className="grid grid-cols-2 gap-4">
           <input
             type="text"
             value={newStockMaster.code}
@@ -671,24 +659,22 @@ const StockMaster: React.FC = () => {
                           </div>
                         ) : (
                           <div className="flex items-center space-x-2">
-                            <select
+                            <SearchableDropdown
+                              options={sectors}
                               value={editedSectorId}
-                              onChange={(e) =>
+                              onChange={(selectedSectorId) =>
                                 handleInputChange(
                                   ref.id,
                                   'SectorId',
-                                  Number(e.target.value)
+                                  Number(selectedSectorId)
                                 )
                               }
-                              className="w-full px-2 py-1 border rounded"
-                            >
-                              <option value="">Select Sector</option>
-                              {sectors.map((sector) => (
-                                <option key={sector.id} value={sector.id}>
-                                  {sector.name}
-                                </option>
-                              ))}
-                            </select>
+                              placeholder="Select Sector"
+                              labelExtractor={(sector) => sector.name}
+                              valueExtractor={(sector) => sector.id}
+                              ariaLabel={`Edit Sector for ${ref.code}`}
+                              className="w-full min-w-48"
+                            />
                             <button
                               onClick={() =>
                                 showAddSectorInput(ref.id, setIsAddingSector)

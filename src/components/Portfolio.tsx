@@ -1,10 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import ReactDatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { fetchPortfolio, getPortfolioDates } from '../services/apiService';
 import { format } from 'date-fns';
 import NestedTable from './NestedTable'; // Import the NestedTable component
 import LocalDatePicker from './LocalDatePicker';
+import {
+  FaArrowUpAZ,
+  FaArrowDownZA,
+  FaArrowDownWideShort,
+  FaArrowUpShortWide,
+} from 'react-icons/fa6';
+// Define sortable keys for the outer table
+type SortKey = 'group' | 'totalInvested' | 'exposure';
 
 type StockDetails = {
   name: string;
@@ -26,6 +34,10 @@ const Portfolio: React.FC = () => {
   );
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   const [highlightDates, setHighlightDates] = useState<string[]>([]); // Dates to highlight
+  const [sortConfig, setSortConfig] = useState<{
+    key: SortKey;
+    direction: 'asc' | 'desc';
+  } | null>(null);
 
   // Fetch portfolio data for the selected date
   const fetchData = async () => {
@@ -50,6 +62,7 @@ const Portfolio: React.FC = () => {
         if (response.success) {
           setHighlightDates(response.dates); // Dates in YYYY-MM-DD format
         }
+        console.log('Uploaded dates:', response.dates);
       } catch (error) {
         console.error('Error fetching uploaded dates:', error);
       }
@@ -107,7 +120,7 @@ const Portfolio: React.FC = () => {
       aggregation[groupKey].totalInvested += totalCostForStock;
 
       const existingStockIndex = aggregation[groupKey].stocks.findIndex(
-        (s) => s[Object.keys(s)[0]].brokerageCode === brokerageCode
+        (s) => s.brokerageCode === brokerageCode
       );
 
       if (existingStockIndex !== -1) {
@@ -144,6 +157,7 @@ const Portfolio: React.FC = () => {
   };
 
   const aggregatedData = aggregatePortfolio();
+  console.log('aggregatedData:', aggregatedData);
 
   const toggleGroup = (groupKey: string) => {
     setExpandedGroups((prev) => ({
@@ -160,6 +174,68 @@ const Portfolio: React.FC = () => {
   };
 
   const totalInvested = calculateTotalInvested();
+
+  const sortedGroupKeys = useMemo(() => {
+    const groupKeys = Object.keys(aggregatedData);
+
+    if (!sortConfig) return groupKeys;
+
+    const sorted = [...groupKeys].sort((a, b) => {
+      let aValue: string | number = '';
+      let bValue: string | number = '';
+
+      switch (sortConfig.key) {
+        case 'group':
+          aValue = a;
+          bValue = b;
+          break;
+        case 'totalInvested':
+          aValue = aggregatedData[a].totalInvested;
+          bValue = aggregatedData[b].totalInvested;
+          break;
+        case 'exposure':
+          aValue = (aggregatedData[a].totalInvested / totalInvested) * 100;
+          bValue = (aggregatedData[b].totalInvested / totalInvested) * 100;
+          break;
+        default:
+          break;
+      }
+
+      if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return sorted;
+  }, [aggregatedData, sortConfig, totalInvested]);
+
+  // Handler to update sort configuration
+  const handleSort = (key: SortKey) => {
+    setSortConfig((prev) => {
+      if (prev && prev.key === key) {
+        // Toggle sort direction
+        return {
+          key,
+          direction: prev.direction === 'asc' ? 'desc' : 'asc',
+        };
+      }
+      // Default to ascending if sorting a new column
+      return { key, direction: 'asc' };
+    });
+  };
+
+  // Function to render sort indicators using react-icons
+  const renderSortIndicator = (key: SortKey) => {
+    let isAsc;
+    if (!sortConfig || sortConfig.key !== key) isAsc = 'asc';
+    else isAsc = sortConfig.direction === 'asc';
+
+    if (key === 'group') {
+      return isAsc ? <FaArrowUpAZ /> : <FaArrowDownZA />;
+    } else {
+      return isAsc ? <FaArrowUpShortWide /> : <FaArrowDownWideShort />;
+    }
+  };
 
   return (
     <div className="container mx-auto py-8">
@@ -209,12 +285,37 @@ const Portfolio: React.FC = () => {
         <table className="min-w-full bg-white">
           <thead>
             <tr>
-              <th className="py-2 px-4 border">{viewMode}</th>
-              <th className="py-2 px-4 border">Total Invested</th>
+              <th className="py-2 px-4 border items-center">
+                <span className="flex-1">{viewMode}</span>
+                <button
+                  onClick={() => handleSort('group')}
+                  className="ml-2 text-sm text-gray-500 hover:underline"
+                >
+                  {renderSortIndicator('group')}
+                </button>
+              </th>
+              <th className="py-2 px-4 border items-center">
+                <span className="flex-1">Total Invested</span>
+                <button
+                  onClick={() => handleSort('totalInvested')}
+                  className="ml-2 text-sm text-gray-500 hover:underline"
+                >
+                  {renderSortIndicator('totalInvested')}
+                </button>
+              </th>
+              <th className="py-2 px-4 border items-center">
+                <span className="flex-1">Exposure</span>
+                <button
+                  onClick={() => handleSort('exposure')}
+                  className="ml-2 text-sm text-gray-500 hover:underline"
+                >
+                  {renderSortIndicator('exposure')}
+                </button>
+              </th>
             </tr>
           </thead>
           <tbody>
-            {Object.keys(aggregatedData).map((groupKey) => (
+            {sortedGroupKeys.map((groupKey) => (
               <React.Fragment key={groupKey}>
                 <tr
                   className="cursor-pointer bg-gray-200"
@@ -224,10 +325,17 @@ const Portfolio: React.FC = () => {
                   <td className="py-2 px-4 border">
                     ₹{aggregatedData[groupKey].totalInvested.toFixed(2)}
                   </td>
+                  <td className="py-2 px-4 border">
+                    {(
+                      (aggregatedData[groupKey].totalInvested / totalInvested) *
+                      100
+                    ).toFixed(2)}
+                    %
+                  </td>
                 </tr>
                 {expandedGroups[groupKey] && (
                   <tr>
-                    <td colSpan={2}>
+                    <td colSpan={3}>
                       {/* Use the NestedTable component here */}
                       <NestedTable
                         viewMode={viewMode}
@@ -245,6 +353,7 @@ const Portfolio: React.FC = () => {
             <tr className="font-bold">
               <td className="py-2 px-4 border">Total Invested in Portfolio</td>
               <td className="py-2 px-4 border">₹{totalInvested.toFixed(2)}</td>
+              <td className="py-2 px-4 border"></td>
             </tr>
           </tfoot>
         </table>

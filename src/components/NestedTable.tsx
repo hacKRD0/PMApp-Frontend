@@ -18,7 +18,7 @@ type NestedTableProps = {
 };
 
 const NestedTable: React.FC<NestedTableProps> = ({ viewMode, stocks }) => {
-  // Define possible sortable fields based on viewMode
+  // Define sortable fields based on viewMode
   const sortableFields = useMemo(() => {
     if (viewMode === 'Stock') {
       return ['brokerageCode', 'brokerage', 'qty', 'avgCost', 'totalCost'];
@@ -27,32 +27,29 @@ const NestedTable: React.FC<NestedTableProps> = ({ viewMode, stocks }) => {
     }
   }, [viewMode]);
 
-  // State to track current sort field and order
+  // State for sorting
   const [sortField, setSortField] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
-  // Initialize sorting on component mount
+  // Initialize sorting
   useEffect(() => {
-    // Set initial sortField to the first column
     if (sortableFields.length > 0) {
       setSortField(sortableFields[0]);
       setSortOrder('asc');
     }
   }, [sortableFields]);
 
-  // Function to handle sorting when a header is clicked
+  // Handle sorting
   const handleSort = (field: string) => {
     if (sortField === field) {
-      // If clicking the same field, toggle the sort order
-      setSortOrder((prevOrder) => (prevOrder === 'asc' ? 'desc' : 'asc'));
+      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
     } else {
-      // If clicking a new field, set it as the sort field and default to ascending
       setSortField(field);
       setSortOrder('asc');
     }
   };
 
-  // Number formatter for Indian numbering system with currency symbol
+  // Number formatter for INR
   const indianNumberFormatter = useMemo(
     () =>
       new Intl.NumberFormat('en-IN', {
@@ -64,45 +61,64 @@ const NestedTable: React.FC<NestedTableProps> = ({ viewMode, stocks }) => {
     []
   );
 
-  // Memoized sorted stocks based on sortField and sortOrder
+  // Aggregate stocks by 'name' if viewMode is 'Sector'
+  const aggregatedStocks = useMemo(() => {
+    if (viewMode === 'Sector') {
+      const aggregationMap: { [key: string]: StockDetails } = {};
+
+      stocks.forEach((stock) => {
+        const key = stock.name;
+        if (!aggregationMap[key]) {
+          // Clone the stock object to avoid mutating original data
+          aggregationMap[key] = { ...stock };
+        } else {
+          // Aggregate quantities and costs
+          aggregationMap[key].qty += stock.qty;
+          aggregationMap[key].totalCost += stock.totalCost;
+          aggregationMap[key].totalValue += stock.totalValue;
+          aggregationMap[key].avgCost =
+            aggregationMap[key].totalCost / aggregationMap[key].qty;
+        }
+      });
+
+      return Object.values(aggregationMap);
+    }
+
+    // For 'Brokerage' and 'Stock' views, return stocks as-is
+    return stocks;
+  }, [stocks, viewMode]);
+
+  // Sort the aggregated stocks
   const sortedStocks = useMemo(() => {
-    const sorted = [...stocks];
+    const sorted = [...aggregatedStocks];
     if (sortField) {
       sorted.sort((a, b) => {
         let aValue: string | number = a[sortField as keyof StockDetails];
         let bValue: string | number = b[sortField as keyof StockDetails];
 
-        // Determine if the field is string or number for proper comparison
         if (typeof aValue === 'string' && typeof bValue === 'string') {
           aValue = aValue.toLowerCase();
           bValue = bValue.toLowerCase();
           if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
           if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
-          // If values are equal, perform secondary sort by quantity
-          return a.qty - b.qty;
+          return 0;
         }
 
         if (typeof aValue === 'number' && typeof bValue === 'number') {
-          if (aValue !== bValue) {
-            return sortOrder === 'asc' ? aValue - bValue : bValue - aValue;
-          }
-          // If values are equal, perform secondary sort by quantity
-          return a.qty - b.qty;
+          return sortOrder === 'asc' ? aValue - bValue : bValue - aValue;
         }
 
         return 0;
       });
     }
     return sorted;
-  }, [stocks, sortField, sortOrder]);
+  }, [aggregatedStocks, sortField, sortOrder]);
 
-  // Function to render sort icons based on current sort state
+  // Render sort icons
   const renderSortIcon = (field: string) => {
     if (sortField !== field) {
-      // Show default sort icon when not sorted by this field
       return <FaSort className="inline ml-1 text-gray-500" />;
     }
-    // Show active sort icon based on sort order
     return sortOrder === 'asc' ? (
       <FaSortUp className="inline ml-1 text-blue-500" />
     ) : (
@@ -148,7 +164,7 @@ const NestedTable: React.FC<NestedTableProps> = ({ viewMode, stocks }) => {
             </>
           ) : (
             <>
-              {/* Stock Header */}
+              {/* Name Header */}
               <th
                 className="py-2 px-4 border cursor-pointer text-left"
                 onClick={() => handleSort('name')}
@@ -160,7 +176,7 @@ const NestedTable: React.FC<NestedTableProps> = ({ viewMode, stocks }) => {
                     : 'none'
                 }
               >
-                Stock {renderSortIcon('name')}
+                {viewMode} {renderSortIcon('name')}
               </th>
             </>
           )}
@@ -228,7 +244,7 @@ const NestedTable: React.FC<NestedTableProps> = ({ viewMode, stocks }) => {
                 </>
               ) : (
                 <>
-                  {/* Stock Name Cell */}
+                  {/* Name Cell */}
                   <td className="py-2 px-4 border">{stock.name}</td>
                 </>
               )}
